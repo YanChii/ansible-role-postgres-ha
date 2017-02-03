@@ -1,2 +1,15 @@
 ---
-# tasks file for postgresql-ha
+# vim: set filetype=yaml expandtab tabstop=2 shiftwidth=2 softtabstop=2 background=dark :
+
+- include: pre-tasks.yml
+- include: pcs.yml
+- include: postgresql_sync.yml
+- include: paf.yml
+
+- name: test constraints presence
+  stat: path=/root/.constraints_processed
+  register: constraints_processed
+
+- include: constraints.yml
+  when: not constraints_processed.stat.exists
+
