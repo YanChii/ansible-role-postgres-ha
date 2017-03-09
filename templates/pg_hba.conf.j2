@@ -7,8 +7,8 @@ local  all  postgres    trust
 local  all  all    md5
 # replication ACLs
 {% for node in play_hosts %}
-host  replication  {{ pg_repl_user }}  {{ hostvars[node].ansible_default_ipv4.address }}/32  md5
-host  postgres     {{ pg_repl_user }}  {{ hostvars[node].ansible_default_ipv4.address }}/32  md5
+host  replication  {{ postgres_ha_pg_repl_user }}  {{ hostvars[node].ansible_default_ipv4.address }}/32  md5
+host  postgres     {{ postgres_ha_pg_repl_user }}  {{ hostvars[node].ansible_default_ipv4.address }}/32  md5
 {% endfor %}
 # IPv4 local connections
 host  all  all  127.0.0.1/32  md5

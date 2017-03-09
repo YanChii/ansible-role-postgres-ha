@@ -1,5 +1,14 @@
 # vim: set filetype=yaml expandtab tabstop=2 shiftwidth=2 softtabstop=2 background=dark :
 
+# location constraints
+- name: setting VIP location constraints
+  shell: pcs constraint location "{{ postgres_ha_cluster_vip_res_name }}" prefers {% for clhost in play_hosts %}{{clhost}}=100 {% endfor %}
+  when: inventory_hostname == "{{ postgres_ha_cluster_master_host }}"   # run only on one node
+
+- name: setting DB location constraints
+  shell: pcs constraint location "{{ postgres_ha_cluster_pg_HA_res_name }}" prefers {% for clhost in play_hosts %}{{clhost}}=100 {% endfor %}
+  when: inventory_hostname == "{{ postgres_ha_cluster_master_host }}"   # run only on one node
+
 
 # colocation constraints
 - name: setting resources colocation group 1

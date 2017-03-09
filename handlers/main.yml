@@ -2,14 +2,11 @@
 # vim: set filetype=yaml expandtab tabstop=2 shiftwidth=2 softtabstop=2 background=dark :
 # handlers file for postgresql-ha
 
-- name: reload iptables
-  service: name=iptables state=restarted
-
 - name: restart postgresql
-  service: name="{{ postgres_orig_svcname }}" state=restarted
+  service: name="{{ postgres_ha_pg_systemd_svcname }}" state=restarted
 
 - name: reload postgresql
-  shell: "{{ bindir }}/pg_ctl -D {{ pgdata }} reload"
+  shell: "{{ postgres_ha_pg_bindir }}/pg_ctl -D {{ postgres_ha_pg_data }} reload"
   become: yes
   become_user: postgres
   vars:
@@ -24,14 +21,3 @@
 - name: reload systemd
   shell: /bin/systemctl daemon-reload
 
-- name: restart esdc services
-  service: name="{{ item }}" state=restarted
-  with_items: "{{ restart_on_esdc_cfg_change_systemd }}"
-  notify: restart esdc cluster services
-
-- name: restart esdc cluster services
-  shell: pcs resource unmanage "{{ item }}" && systemctl restart "{{ item }}" && pcs resource manage "{{ item }}"
-  with_items: "{{ restart_on_esdc_cfg_change_cluster }}"
-
-- name: restart rabbitmq-server
-  service: name="{{ rabbitmq.service }}" state=restarted

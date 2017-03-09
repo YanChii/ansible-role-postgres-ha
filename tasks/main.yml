@@ -3,6 +3,7 @@
 
 - include: pre-tasks.yml
 - include: pcs.yml
+- include: vip.yml
 - include: postgresql_sync.yml
 - include: paf.yml
 
@@ -13,3 +14,4 @@
 - include: constraints.yml
   when: not constraints_processed.stat.exists
 
+- include: finalize.yml

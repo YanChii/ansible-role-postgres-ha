@@ -59,15 +59,19 @@
 
 - name: alter stonith settings
   pcs_property: name=stonith-enabled value=false
+  run_once: true
 
-- name: alter cluster settings
+- name: alter cluster policy settings
   pcs_property: name=symmetric-cluster value=false
+  run_once: true
 
-- name: alter cluster settings
+- name: alter cluster transition settings
   pcs_property: name=crmd-transition-delay value=3s
+  run_once: true
 
 - name: verify cluster configuration
   shell: crm_verify -L -V
+  run_once: true
 
 - name: enable cluster autostart
   shell: pcs cluster enable

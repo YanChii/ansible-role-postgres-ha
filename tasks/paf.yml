@@ -1,41 +1,15 @@
 # vim: set filetype=yaml expandtab tabstop=2 shiftwidth=2 softtabstop=2 background=dark :
 
-
-#- name: reconfigure database
-#  copy: src=postgresql.conf dest="/var/lib/pgsql/9.5/data/postgresql.conf"
-#  notify: restart postgresql
-#  args:
-#    owner: postgres
-#    group: postgres
-#    mode:  0644
-#
-## netreba nutne
-#- meta: flush_handlers
-
-- name: create virtual IP resource
-  when: inventory_hostname == "{{ postgres_ha_cluster_master_host }}"   # run only on one node
-  pcs_resource: command=create resource_id="{{ postgres_ha_cluster_vip_res_name }}" type=ocf:heartbeat:IPaddr2
-  args:
-    options:
-      ip: "{{ postgres_ha_cluster_vip }}"
-      cidr_netmask: "{{ postgres_ha_cluster_vip_mask }}"
-    operations:
-      - action: monitor
-        options:
-          interval: 10s
-
-
-#- name: prepare install of DB failover agent
-#  copy: src=resource-agents-paf-2.1~rc1-1.noarch.rpm dest=/root/resource-agents-paf-2.1~rc1-1.noarch.rpm
-#
-#- name: install DB failover agent
-#  yum:
-#    name: /root/resource-agents-paf-2.1~rc1-1.noarch.rpm
-#    state: present
+# this rpm is also available on github.. but when multiple servers start to download 
+# the same file from github simultanneously, github will likely block you
+# and the role will fail
+# that's why it's embedded in the role
+- name: copy PAF rpm to hosts
+  copy: src="resource-agents-paf-2.1.0-1.noarch.rpm" dest="/tmp/resource-agents-paf-2.1.0-1.noarch.rpm"
 
 - name: install DB failover agent
   yum:
-    name: https://github.com/dalibo/PAF/releases/download/v2.1.0/resource-agents-paf-2.1.0-1.noarch.rpm
+    name: "/tmp/resource-agents-paf-2.1.0-1.noarch.rpm"
     state: present
 
 #- name: apply patches to DB failover agent
@@ -99,39 +73,7 @@
     options:
       master-max      : 1
       master-node-max : 1
-      clone-max       : 2
+      clone-max       : "{{ play_hosts|length }}"
       clone-node-max  : 1
       notify          : true
-
-- name: enable database cluster resource
-  shell: pcs resource enable "{{ postgres_ha_cluster_pg_HA_res_name }}" 
-  when: inventory_hostname == "{{ postgres_ha_cluster_master_host }}"   # run only on one node
-
-- name: refresh database cluster resource
-  shell: pcs resource cleanup "{{ postgres_ha_cluster_pg_HA_res_name }}" && pcs resource manage "{{ postgres_ha_cluster_pg_HA_res_name }}" && pcs resource clear "{{ postgres_ha_cluster_pg_HA_res_name }}"
-  when: inventory_hostname == "{{ postgres_ha_cluster_master_host }}"   # run only on one node
-
-- name: setting DB location constraints
-  shell: pcs constraint location "{{ postgres_ha_cluster_pg_HA_res_name }}" prefers {% for clhost in play_hosts %}{{clhost}}=100 {% endfor %}
-  when: inventory_hostname == "{{ postgres_ha_cluster_master_host }}"   # run only on one node
-
-- name: check if slaves are connected
-  shell: psql -Aqtc "SELECT count(*) FROM pg_stat_replication"
-  when: inventory_hostname == "{{ postgres_ha_cluster_master_host }}"   # run only on one node
-  become: yes
-  become_user: postgres
-  register: slavecount
-  vars:
-    ansible_ssh_pipelining: no
-  until: (slavecount.stdout|string) == ((play_hosts|length - 1)|string)
-  retries: 10
-  delay: 2
-
-#- name: give time for DB resource to stabilize
-#  pause: seconds=10
-#
-#- name: check if DB resource has failed
-#  shell: pcs resource | grep '\s*postgres.*FAILED.*'
-#  register: find_failure
-#  failed_when: find_failure|succeeded
 
