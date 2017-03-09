@@ -1,28 +1,25 @@
 # vim: set filetype=yaml expandtab tabstop=2 shiftwidth=2 softtabstop=2 background=dark :
 
-- name: import pg95 repo
+- name: 'import pg{{ postgres_ha_pg_version | replace(".", "") }} repo'
   yum:
-    name: https://download.postgresql.org/pub/repos/yum/9.5/redhat/rhel-7-x86_64/pgdg-centos95-9.5-3.noarch.rpm
+    name: 'https://download.postgresql.org/pub/repos/yum/{{ postgres_ha_pg_version }}/redhat/rhel-7-x86_64/pgdg-centos{{ postgres_ha_pg_version | replace(".", "") }}-{{ postgres_ha_pg_version }}-3.noarch.rpm'
     state: installed
 
-- name: install pg95
+- name: 'install pg{{ postgres_ha_pg_version | replace(".", "") }}'
   yum:
-    name: postgresql95-server, postgresql95-contrib, python-psycopg2
+    name: 'postgresql{{ postgres_ha_pg_version | replace(".", "") }}-server, postgresql{{ postgres_ha_pg_version | replace(".", "") }}-contrib, python-psycopg2'
     state: installed
 
-- name: init DB dir on master
-  shell: "{{ postgres_ha_pg_bindir }}/postgresql95-setup initdb"
+- name: init DB dir on master if necessary
+  shell: '{{ postgres_ha_pg_bindir }}/postgresql{{ postgres_ha_pg_version | replace(".", "") }}-setup initdb'
   args:
     creates: "{{ postgres_ha_pg_data }}/PG_VERSION"
   when: inventory_hostname == "{{ postgres_ha_cluster_master_host }}"   # run only on one node
 
-- name: create DB conf dir
-  file: state=directory path="{{ postgres_ha_pg_data }}/conf.d"
-  when: inventory_hostname == "{{ postgres_ha_cluster_master_host }}"   # run only on one node
-  args:
-    owner: postgres
-    group: postgres
-    mode:  0700
+# if the file does not exist, DB sync is needed
+- name: check if DB was synchronized before
+  stat: path="{{ postgres_ha_pg_data }}/.synchronized"
+  register: db_prevsync_file
 
 #- name: push DB config (clustering)
 #  template: src=postgresql.conf.j2 dest="{{ postgres_ha_pg_data }}/postgresql.conf"
@@ -37,20 +34,62 @@
     dest="{{ postgres_ha_pg_data }}/postgresql.conf"
     regexp="^([# ]*{{ item.key }} *=.*$)"
     replace="{{ item.key }} = {{ item.value }}"
-  when: inventory_hostname == "{{ postgres_ha_cluster_master_host }}"   # run only on master node
+  when: inventory_hostname == "{{ postgres_ha_cluster_master_host }}" or
+        db_prevsync_file.stat.exists
+        # run only on master node or on synchronized slave
+        # because their configs are already in use
+        # and we need to keep them up to date
   with_dict: "{{ postgres_ha_postgresql_conf_vars }}"
-  notify: restart postgresql
+  register: alter_pgconf
 
-- meta: flush_handlers
+# restarting is a tricky thing because of idempotency. We have to figure out somehow
+# if the database is managed by systemd or by pacemaker.
 
-- name: push DB config (ACL)
-  template: src=pg_hba.conf.j2 dest="{{ postgres_ha_pg_data }}/pg_hba.conf"
-  when: inventory_hostname == "{{ postgres_ha_cluster_master_host }}"   # run only on one node
+- name: check if DB is running (failure is ok)
+  shell: "systemctl show -p SubState postgresql-9.6 | grep -q SubState=running"
+  register: db_running_systemd
+  become: yes
+  become_user: postgres
+  ignore_errors: True
+
+- name: restart postgresql using systemd if needed
+  service: name="{{ postgres_ha_pg_systemd_svcname }}" state=restarted
+  when: alter_pgconf.changed and (not alter_pgconf.skipped) and (db_running_systemd|succeeded)
+  # run this type of restart if the database is runnning under systemd
+
+- name: restart postgresql in cluster (failure is ok)
+  shell: "{{ postgres_ha_pg_bindir }}/pg_ctl -D {{ postgres_ha_pg_data }} restart"
+  become: yes
+  become_user: postgres
+  vars:
+    ansible_ssh_pipelining: no
+  when: alter_pgconf.changed and (not alter_pgconf.skipped) and (db_running_systemd|failed)
+  # if database is not running under systemd, assume it's already clustered
+  # if this command fails, then the DB is not running at all.. 
+  # ..then the config reload is not needed and we can safely continue
+  ignore_errors: True
+
+- name: alter DB ACL in pg_hba.conf
+  lineinfile: dest="{{ postgres_ha_pg_data }}/pg_hba.conf"
+    regexp='^host    postgres .*{{ hostvars[item].ansible_default_ipv4.address }}/32'
+    insertbefore='^host'
+    line='host    postgres       {{ postgres_ha_pg_repl_user }}    {{ hostvars[item].ansible_default_ipv4.address }}/32          md5'
+  with_items: "{{ play_hosts }}"
+  when: inventory_hostname == "{{ postgres_ha_cluster_master_host }}" or
+        db_prevsync_file.stat.exists
+        # run only on master node or on synchronized slave
   notify: reload postgresql
-  args:
-    owner: postgres
-    group: postgres
-    mode:  0600
+
+- name: alter DB replication ACL in pg_hba.conf
+  lineinfile: dest="{{ postgres_ha_pg_data }}/pg_hba.conf"
+    regexp='^host    replication .*{{ hostvars[item].ansible_default_ipv4.address }}/32'
+    insertbefore='^host'
+    line='host    replication     {{ postgres_ha_pg_repl_user }}    {{ hostvars[item].ansible_default_ipv4.address }}/32          md5'
+  with_items: "{{ play_hosts }}"
+  when: inventory_hostname == "{{ postgres_ha_cluster_master_host }}" or
+        db_prevsync_file.stat.exists
+        # run only on master node or on synchronized slave
+  notify: reload postgresql
 
 - meta: flush_handlers
 
@@ -63,7 +102,7 @@
     mode:  0600
     create: yes
 
-- name: setup DB cluster replication auth (master IP)
+- name: setup .pgpass replication auth for master IP
   lineinfile: dest="~postgres/.pgpass" line="{{ postgres_ha_cluster_vip }}:{{ postgres_ha_pg_port }}:replication:{{ postgres_ha_pg_repl_user }}:{{ postgres_ha_pg_repl_pass }}" state=present
   args:
     owner: postgres
@@ -71,7 +110,7 @@
     mode:  0600
     create: yes
 
-- name: setup DB cluster replication auth (all nodes)
+- name: setup .pgpass replication auth for other IPs
   lineinfile: dest="~postgres/.pgpass" line="{{ hostvars[item].ansible_default_ipv4.address }}:{{ postgres_ha_pg_port }}:replication:{{ postgres_ha_pg_repl_user }}:{{ postgres_ha_pg_repl_pass }}" state=present
   with_items: "{{play_hosts}}"
   args:
@@ -80,7 +119,7 @@
     mode:  0600
     create: yes
 
-- name: check if master host ("{{ postgres_ha_cluster_master_host }}") is really a DB master
+- name: check if master host "{{ postgres_ha_cluster_master_host }}" is really a DB master
   shell: psql -Aqtc "SELECT pg_is_in_recovery()"
   when: inventory_hostname == "{{ postgres_ha_cluster_master_host }}"   # run only on one node
   become: yes
@@ -111,7 +150,8 @@
 # check if the DB is already clustered
 # If the resource constraint already exists, it means that DB clustering was fully applied before
 # and the database should run only from cluster resource.
-- name: check if DB is running under cluster (failure is OK)
+
+- name: check if DB is running in cluster (failure is OK)
   #shell: /bin/sh -c 'if pcs resource show "{{ postgres_ha_cluster_pg_HA_res_name }}" &> /dev/null; then echo True; else echo False; fi'
   #shell: pcs resource show "{{ postgres_ha_cluster_pg_HA_res_name }}"
   shell: pcs constraint location show resources "{{ postgres_ha_cluster_pg_HA_res_name }}" | grep -q Enabled

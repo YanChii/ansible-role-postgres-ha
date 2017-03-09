@@ -2,8 +2,8 @@
 - debug: msg='MASTER NODE SET TO {{ postgres_ha_cluster_master_host }}'
   run_once: true
 
-- name: stop iptables
-  service: name=iptables state=stopped enabled=false
+#- name: stop iptables
+#  service: name=iptables state=stopped enabled=false
 
 - name: verify postgres_ha_cluster_master_host
   fail:

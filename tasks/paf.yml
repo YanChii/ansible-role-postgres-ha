@@ -7,7 +7,7 @@
 - name: copy PAF rpm to hosts
   copy: src="resource-agents-paf-2.1.0-1.noarch.rpm" dest="/tmp/resource-agents-paf-2.1.0-1.noarch.rpm"
 
-- name: install DB failover agent
+- name: install PAF DB failover agent
   yum:
     name: "/tmp/resource-agents-paf-2.1.0-1.noarch.rpm"
     state: present
