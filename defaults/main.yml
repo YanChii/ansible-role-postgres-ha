@@ -21,9 +21,9 @@ postgres_ha_pg_systemd_svcname: "postgresql-{{ postgres_ha_pg_version }}"   # th
 postgres_ha_pg_data: "/var/lib/pgsql/{{ postgres_ha_pg_version }}/data"     # where can I find PG datadir?
 postgres_ha_pg_bindir: "/usr/pgsql-{{ postgres_ha_pg_version }}/bin"        # where are the PG binaries?
 
-postgres_ha_postgresql_conf_vars:                          # When altering this configuration, please copy all variables specified here \
+postgres_ha_postgresql_conf_vars:                          # When altering this variable, please copy all postgresql.conf items specified here \
     listen_addresses: "'*'"                                     # because this whole variable will be overloaded by your new definition. \
-    max_wal_senders: "{{ play_hosts|length * 2 }}"              # Also, you can add any postgresql.conf variable to this list, it will work.
+    max_wal_senders: "{{ play_hosts|length * 2 }}"              # You can change also other postgresql.conf variables here, it will work.
     max_replication_slots: "{{ play_hosts|length * 2 }}"
     wal_level: "hot_standby"
     hot_standby: "on"
