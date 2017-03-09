@@ -1,29 +1,29 @@
 ---
 # cluster config
 postgres_ha_cluster_master_host: "{{ play_hosts[0] }}"     # sync all DB slaves from this master node (set to first node if not defined)
-postgres_ha_cluster_name: 'pgcluster'
-postgres_ha_cluster_vip:  10.20.30.40
-postgres_ha_cluster_vip_mask: 24
-postgres_ha_cluster_vip_res_name:  'pg-vip'
-postgres_ha_cluster_pg_res_name: 'postgres'         # slave DB cluster resource name
-postgres_ha_cluster_pg_HA_res_name: 'postgres-ha'   # master DB cluster resource name (this name is used to manage postgres resource)
+postgres_ha_cluster_name: 'pgcluster'                      # name of the pcs cluster
+postgres_ha_cluster_vip:  10.20.30.40                      # floating IP that will be used to connect to clustered DB (always follows the master)
+postgres_ha_cluster_vip_mask: 24                           # floating IP netmask
+postgres_ha_cluster_vip_res_name:  'pg-vip'                # resource name of the floating IP
+postgres_ha_cluster_pg_res_name: 'postgres'                # slave DB cluster resource name
+postgres_ha_cluster_pg_HA_res_name: 'postgres-ha'          # master DB cluster resource name (this name is used to manage postgres resource)
 postgres_ha_pg_port:  5432
 
 # auth config
-postgres_ha_pg_repl_user: replicator
+postgres_ha_pg_repl_user: replicator                       # database user used for replication
 postgres_ha_pg_repl_pass: rybKath3KeckGov1
-postgres_ha_cluster_ha_password: 'fropFav7epAbOch2'
+postgres_ha_cluster_ha_password: 'fropFav7epAbOch2'        # password for joining the pcs cluster
 postgres_ha_cluster_ha_password_hash: '$6$MHAki4YS$Nk7O3FEC2G.INznoSUj4ByFgdwFJ8mcI9.Ks3XAoLLe9f9GB36G8hZe9o8ygDySJwvnLVCn0LGPzcOapK42/A/'  # fropFav7epAbOch2
 
 # postgres config
 postgres_ha_pg_version: 9.6
-postgres_ha_pg_systemd_svcname: "postgresql-{{ postgres_ha_pg_version }}"
-postgres_ha_pg_data: "/var/lib/pgsql/{{ postgres_ha_pg_version }}/data"
-postgres_ha_pg_bindir: "/usr/pgsql-{{ postgres_ha_pg_version }}/bin"
+postgres_ha_pg_systemd_svcname: "postgresql-{{ postgres_ha_pg_version }}"   # the name of the original posgres DB resource in systemd
+postgres_ha_pg_data: "/var/lib/pgsql/{{ postgres_ha_pg_version }}/data"     # where can I find PG datadir?
+postgres_ha_pg_bindir: "/usr/pgsql-{{ postgres_ha_pg_version }}/bin"        # where are the PG binaries?
 
-postgres_ha_postgresql_conf_vars:
-    listen_addresses: "'*'"
-    max_wal_senders: "{{ play_hosts|length * 2 }}"
+postgres_ha_postgresql_conf_vars:                          # When altering this configuration, please copy all variables specified here \
+    listen_addresses: "'*'"                                     # because this whole variable will be overloaded by your new definition. \
+    max_wal_senders: "{{ play_hosts|length * 2 }}"              # Also, you can add any postgresql.conf variable to this list, it will work.
     max_replication_slots: "{{ play_hosts|length * 2 }}"
     wal_level: "hot_standby"
     hot_standby: "on"

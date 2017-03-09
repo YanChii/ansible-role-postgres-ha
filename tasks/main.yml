@@ -8,7 +8,7 @@
 - include: paf.yml
 
 - name: test constraints presence
-  stat: path=/root/.constraints_processed
+  stat: path="/var/lib/pgsql/{{ postgres_ha_pg_version }}/.{{postgres_ha_cluster_name}}_constraints_processed"
   register: constraints_processed
 
 - include: constraints.yml

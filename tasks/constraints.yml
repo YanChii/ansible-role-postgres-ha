@@ -25,6 +25,6 @@
   when: inventory_hostname == "{{ postgres_ha_cluster_master_host }}"   # run only on one node
 
 - name: marking constraints as processed
-  shell: echo "LOCKFILE. Do not delete!" > /root/.constraints_processed
+  shell: echo "LOCKFILE. Do not delete!" > "/var/lib/pgsql/{{ postgres_ha_pg_version }}/.{{postgres_ha_cluster_name}}_constraints_processed"
   args:
-    creates: /root/.constraints_processed
+    creates: "/var/lib/pgsql/{{ postgres_ha_pg_version }}/.{{postgres_ha_cluster_name}}_constraints_processed"

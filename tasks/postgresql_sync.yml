@@ -34,40 +34,11 @@
     dest="{{ postgres_ha_pg_data }}/postgresql.conf"
     regexp="^([# ]*{{ item.key }} *=.*$)"
     replace="{{ item.key }} = {{ item.value }}"
-  when: inventory_hostname == "{{ postgres_ha_cluster_master_host }}" or
-        db_prevsync_file.stat.exists
-        # run only on master node or on synchronized slave
-        # because their configs are already in use
-        # and we need to keep them up to date
+  when: inventory_hostname == "{{ postgres_ha_cluster_master_host }}"  # run only on master node
   with_dict: "{{ postgres_ha_postgresql_conf_vars }}"
-  register: alter_pgconf
+  notify: restart postgresql
 
-# restarting is a tricky thing because of idempotency. We have to figure out somehow
-# if the database is managed by systemd or by pacemaker.
-
-- name: check if DB is running (failure is ok)
-  shell: "systemctl show -p SubState postgresql-9.6 | grep -q SubState=running"
-  register: db_running_systemd
-  become: yes
-  become_user: postgres
-  ignore_errors: True
-
-- name: restart postgresql using systemd if needed
-  service: name="{{ postgres_ha_pg_systemd_svcname }}" state=restarted
-  when: alter_pgconf.changed and (not alter_pgconf.skipped) and (db_running_systemd|succeeded)
-  # run this type of restart if the database is runnning under systemd
-
-- name: restart postgresql in cluster (failure is ok)
-  shell: "{{ postgres_ha_pg_bindir }}/pg_ctl -D {{ postgres_ha_pg_data }} restart"
-  become: yes
-  become_user: postgres
-  vars:
-    ansible_ssh_pipelining: no
-  when: alter_pgconf.changed and (not alter_pgconf.skipped) and (db_running_systemd|failed)
-  # if database is not running under systemd, assume it's already clustered
-  # if this command fails, then the DB is not running at all.. 
-  # ..then the config reload is not needed and we can safely continue
-  ignore_errors: True
+- meta: flush_handlers
 
 - name: alter DB ACL in pg_hba.conf
   lineinfile: dest="{{ postgres_ha_pg_data }}/pg_hba.conf"
