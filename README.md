@@ -3,15 +3,18 @@ postgres-ha
 
 With this role, you will transform your standalone postgresql server to N-node postgres cluster with automated failover. You only need one working postgresql server and other hosts with clean CentOS 7 minimal install.
 
+Alternatively, this role can create a database cluster for you from scratch. If no postgres database is detected, it will be created.
+
 What it will do:
 - install the cluster software stack (pcs, corosync, pacemaker)
-- add cluster hosts IPs to /etc/hosts file
-- create cluster from all play hosts
+- add IPs of cluster hosts to /etc/hosts files
+- create a pcs cluster from all play hosts
 - install database binaries if needed
-- alter postgres settings if needed
+- init master database if needed
+- alter postgresql configuration if needed
 - sync slave databases from master host
 - make sure the DB replication is working
-- create database and IP resources and constraints
+- create cluster resources for database, floating IP and constraints
 - check again that everything is working as expected
 
 Automated failover is setup using PAF pacemaker module: https://github.com/dalibo/PAF
@@ -21,7 +24,7 @@ What you should know
 
 - The role is idempotent. I've made many checks to allow running it multiple times without breaking things. You can run it again safely even if the role fails. The only thing you need to check before the run is the `postgres_ha_cluster_master_host` variable. But don't worry, if the specified host is not the master database, the role will fail gracefully without disrupting things.
 
-- During the run, the role will alter your postgresql.conf and pg_hba.conf to enable replication. You can review the changes to postgresql.conf in defaults/main.yml (`postgres_ha_postgresql_conf_vars` variable). In pg_hba.conf, the host ACL statements will be added for every cluster node. They will be added before all previously existing host ACL statements.
+- During the run, the role will alter your postgresql.conf and pg_hba.conf to enable replication. You can review the changes to postgresql.conf in [defaults/main.yml](defaults/main.yml) (`postgres_ha_postgresql_conf_vars` variable). In pg_hba.conf, the host ACL statements will be added for every cluster node. They will be added before all previously existing host ACL statements.
 
 - The postgres replication is asynchronnous by default. If you want synchronnous replication, alter the `postgres_ha_postgresql_conf_vars` variable by adding `synchronous_standby_names` parameter. Please see postgresql manual for more info. Also note that if the last synchronnous replica disconnects from master, the master database will stop serving requests.
 
@@ -29,7 +32,7 @@ What you should know
 
 - You need to alter firewall settings before running this role. The cluster members need to communicate among each other to form a cluster and to replicate postgres DB. I recommend adding some firewall role before the postgres-ha role.
 
-- If the master datadir is empty, the role will init an empty datadir. Slave nodes will then download this empty database. If the datadir is not empty, the initdb will be skipped. This means that you can run this role on clean CentOS installs that does not have any postgresql database installed. The result will be fully working empty database cluster.
+- If the master datadir is empty on the first run, the role will init an empty datadir. Slave nodes will then download this empty database. If the datadir is not empty, the initdb will be skipped. This means that you can run this role on clean CentOS installs that don't have any postgresql database installed. The result will be fully working empty database cluster.
 
 - On the first run, the datadirs on slave nodes will be deleted without prompt. Please make sure you specify the correct `postgres_ha_cluster_master_host` at least for this first run (slave datadirs will NEVER be deleted after first initial sync is done).
 
