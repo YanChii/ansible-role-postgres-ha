@@ -53,7 +53,7 @@ If you have binaries from other repo, you need to edit the `tasks/postgresql_syn
 Role Variables
 --------------
 
-See defaults in defaults/main.yml
+For all variables with description see [defaults/main.yml](defaults/main.yml)
 
 Variables that must be changed:
 - `postgres_ha_cluster_master_host`        -    the master database host (WARNING: please make sure you fill this correctly, otherwise you may lose data!)
@@ -80,6 +80,7 @@ Two settings are required:
 - `gather_facts=True`        - we need to know the IP addresses of cluster nodes
 - `any_errors_fatal=True`    - it ensures that error on any node will result in stopping the whole ansible run. Because it doesn't make sense to continue when you lose some of your cluster nodes during transit.
 
+```
     - name: install PG HA
       hosts: db?
       gather_facts: True
@@ -95,7 +96,7 @@ Two settings are required:
           service: name=iptables state=stopped enabled=no
       roles:
          - postgres-ha
-
+```
 
 Cleanup after failure
 ---------------------
@@ -150,5 +151,6 @@ Author Information
 ------------------
 
 Created by YanChi.
+
 Originally part of the Danube Cloud project (https://github.com/erigones/esdc-ce).
 
