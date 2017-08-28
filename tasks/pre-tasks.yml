@@ -7,3 +7,7 @@
     msg: "CRITICAL: defined master host ({{ postgres_ha_cluster_master_host }}) is not in host list ({{ play_hosts }})"
   when: postgres_ha_cluster_master_host not in play_hosts
 
+- name: identifying the OS
+  set_fact:
+    os_version: 'centos{{ ansible_distribution_major_version }}'
+  when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
