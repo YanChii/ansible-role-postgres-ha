@@ -3,21 +3,24 @@
 - debug: msg='cluster_members={{play_hosts}}'
   run_once: true
 
-- name: "Build hosts file"
-  lineinfile: dest=/etc/hosts regexp='.*{{ item }}$' line="{{ hostvars[item].ansible_default_ipv4.address }} {{ item }}" state=present
-  when: hostvars[item].ansible_default_ipv4.address is defined
-  with_items: "{{play_hosts}}"
-
 - name: install cluster pkgs
   yum:
     name: pcs
     state: present
 
-- name: install additional cluster pkgs
+- name: install additional cluster pkgs for centos6
   yum:
-    name: pacemaker
+    name: '{{ item }}'
     state: present
   when: os_version == 'centos6'
+  with_items:
+    - pacemaker
+    - libselinux-python
+
+- name: "Build hosts file"
+  lineinfile: dest=/etc/hosts regexp='.*{{ item }}$' line="{{ hostvars[item].ansible_default_ipv4.address }} {{ item }}" state=present
+  when: hostvars[item].ansible_default_ipv4.address is defined
+  with_items: "{{play_hosts}}"
 
 - name: service pcsd start                         
   service: name=pcsd state=started enabled=yes

@@ -4,15 +4,26 @@
 # the same file from github simultanneously, github will likely block you
 # and the role will fail
 # that's why it's embedded in the role
+
+- name: select proper PAF package (centos6)
+  set_fact:
+    paf_pkg: 'resource-agents-paf-2.1.0-1.noarch.rpm'
+  when: os_version == 'centos7'
+
+- name: select proper PAF package (centos6)
+  set_fact:
+    paf_pkg: 'resource-agents-paf-1.1.0-1.noarch.rpm'
+  when: os_version == 'centos6'
+
 - name: copy PAF rpm to hosts
-  copy: src="resource-agents-paf-2.1.0-1.noarch.rpm" dest="/tmp/resource-agents-paf-2.1.0-1.noarch.rpm"
+  copy: src="{{ paf_pkg }}" dest="/tmp/{{ paf_pkg }}"
 
 - name: install PAF DB failover agent
   yum:
-    name: "/tmp/resource-agents-paf-2.1.0-1.noarch.rpm"
+    name: "/tmp/{{ paf_pkg }}"
     state: present
 
-#- name: apply patches to DB failover agent
+#- name: apply geo-HA patches to DB failover agent
 #  copy: src=pgsqlms dest=/usr/lib/ocf/resource.d/heartbeat/pgsqlms
 #  args:
 #    owner: root
