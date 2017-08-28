@@ -96,7 +96,7 @@ Two settings are required:
         postgres_ha_cluster_ha_password_hash: '$6$mHeZ7/LD1y.........7VJYu.'
       pre_tasks:
         - name: disable firewall
-          service: name=iptables state=stopped enabled=no
+          service: name=firewalld state=stopped enabled=no
       roles:
          - postgres-ha
 ```
