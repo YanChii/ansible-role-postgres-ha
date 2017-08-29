@@ -32,23 +32,23 @@
     update_password: always
     password: "{{ postgres_ha_cluster_ha_password_hash }}"
 
+# centos6 doesn't support cluster auth before cluster creation
+- name: create cluster (centos6)
+  shell: pcs cluster setup --local --name {{ postgres_ha_cluster_name }} {{ play_hosts | join( " ") }}
+  args:
+    creates: /etc/cluster/cluster.conf
+  when: os_version == 'centos6'
+
 - name: setup cluster auth
   shell: pcs cluster auth {{ play_hosts | join( " ") }} -u hacluster -p "{{ postgres_ha_cluster_ha_password }}"
-  when: os_version == 'centos7'
 
-- name: create cluster
+- name: create cluster (centos7)
   #shell: pcs cluster setup --name {{ postgres_ha_cluster_name }} {{ play_hosts | join( " ") }}
   shell: pcs cluster setup --name {{ postgres_ha_cluster_name }} "{{ postgres_ha_cluster_master_host }}"
   run_once: true
   args:
     creates: /etc/corosync/corosync.conf
   when: os_version == 'centos7'
-
-- name: create cluster
-  shell: pcs cluster setup --local --name {{ postgres_ha_cluster_name }} {{ play_hosts | join( " ") }}
-  args:
-    creates: /etc/cluster/cluster.conf
-  when: os_version == 'centos6'
 
 - name: join cluster nodes
   shell: /bin/sh -c "if ! grep -q 'ring0_addr[:] *{{ item }}[\t ]*$' /etc/corosync/corosync.conf; then pcs cluster node add {{ item }}; fi"
