@@ -8,7 +8,7 @@
     name: pcs
     state: present
 
-- name: install additional cluster pkgs for centos6
+- name: install additional cluster pkgs for centos 6
   yum:
     name: '{{ item }}'
     state: present
@@ -32,33 +32,41 @@
     update_password: always
     password: "{{ postgres_ha_cluster_ha_password_hash }}"
 
-# centos6 doesn't support cluster auth before cluster creation
-- name: create cluster (centos6)
-  shell: pcs cluster setup --local --name {{ postgres_ha_cluster_name }} {{ play_hosts | join( " ") }}
-  args:
-    creates: /etc/cluster/cluster.conf
-  when: os_version == 'centos6'
-
 - name: setup cluster auth
   shell: pcs cluster auth {{ play_hosts | join( " ") }} -u hacluster -p "{{ postgres_ha_cluster_ha_password }}"
 
+# We create cluster in two steps:
+# 1. create one-node cluster
+# 2. join other cluster nodes (the task below)
+# The reason is that we want to support adding new nodes by re-running the role.
 - name: create cluster (centos7)
   #shell: pcs cluster setup --name {{ postgres_ha_cluster_name }} {{ play_hosts | join( " ") }}
   shell: pcs cluster setup --name {{ postgres_ha_cluster_name }} "{{ postgres_ha_cluster_master_host }}"
-  run_once: true
   args:
     creates: /etc/corosync/corosync.conf
-  when: os_version == 'centos7'
+  when: os_version == 'centos7' and
+        inventory_hostname == postgres_ha_cluster_master_host   # run only on one node
 
-- name: join cluster nodes
+- name: create cluster (centos6)
+  shell: pcs cluster setup --name {{ postgres_ha_cluster_name }} "{{ postgres_ha_cluster_master_host }}"
+  args:
+    creates: /etc/cluster/cluster.conf
+  when: os_version == 'centos6' and
+        inventory_hostname == postgres_ha_cluster_master_host    # run only on one node
+
+- name: join cluster nodes (centos7)
   shell: /bin/sh -c "if ! grep -q 'ring0_addr[:] *{{ item }}[\t ]*$' /etc/corosync/corosync.conf; then pcs cluster node add {{ item }}; fi"
-  run_once: true
   with_items: '{{ play_hosts | difference([inventory_hostname]) }}'   # all hosts except me
-  when: os_version == 'centos7'
+  when: os_version == 'centos7' and
+        inventory_hostname == postgres_ha_cluster_master_host    # run only on master node
 
-#- name: alter votequorum config
-#  template: src=corosync.conf.j2 dest=/etc/corosync/corosync.conf
-#  notify: restart corosync
+# Ansible escapes quotes (") too much and breaks regexes. I had to substitute 'name="membername"' for 'name=.membername.'.
+# However it should not affect the result because the quotes are always there.
+- name: join cluster nodes (centos6)
+  shell: /bin/sh -c "if ! grep -q '<clusternode .*name=.{{ item }}.[ \t>]' /etc/cluster/cluster.conf; then pcs cluster node add {{ item }}; fi"
+  with_items: '{{ play_hosts | difference([inventory_hostname]) }}'   # all hosts except me
+  when: os_version == 'centos6' and
+        inventory_hostname == postgres_ha_cluster_master_host    # run only on master node
 
 # start cluster on every node separately (can be run multiple times without failure)
 - name: start cluster
