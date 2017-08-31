@@ -45,14 +45,14 @@
   args:
     creates: /etc/corosync/corosync.conf
   when: os_version == 'centos7' and
-        inventory_hostname == postgres_ha_cluster_master_host   # run only on one node
+        inventory_hostname == postgres_ha_cluster_master_host   # run only on master node
 
 - name: create cluster (centos6)
   shell: pcs cluster setup --name {{ postgres_ha_cluster_name }} "{{ postgres_ha_cluster_master_host }}"
   args:
     creates: /etc/cluster/cluster.conf
   when: os_version == 'centos6' and
-        inventory_hostname == postgres_ha_cluster_master_host    # run only on one node
+        inventory_hostname == postgres_ha_cluster_master_host    # run only on master node
 
 - name: join cluster nodes (centos7)
   shell: /bin/sh -c "if ! grep -q 'ring0_addr[:] *{{ item }}[\t ]*$' /etc/corosync/corosync.conf; then pcs cluster node add {{ item }}; fi"
