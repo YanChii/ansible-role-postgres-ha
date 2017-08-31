@@ -60,10 +60,8 @@
   when: os_version == 'centos7' and
         inventory_hostname == postgres_ha_cluster_master_host    # run only on master node
 
-# Ansible escapes quotes (") too much and breaks regexes. I had to substitute 'name="membername"' for 'name=.membername.'.
-# However it should not affect the result because the quotes are always there.
 - name: join cluster nodes (centos6)
-  shell: /bin/sh -c "if ! grep -q '<clusternode .*name=.{{ item }}.[ \t>]' /etc/cluster/cluster.conf; then pcs cluster node add {{ item }}; fi"
+  shell: /bin/sh -c "if ! grep -q '<clusternode .*name=\"{{ item }}\"' /etc/cluster/cluster.conf; then pcs cluster node add {{ item }}; fi"
   with_items: '{{ play_hosts | difference([inventory_hostname]) }}'   # all hosts except me
   when: os_version == 'centos6' and
         inventory_hostname == postgres_ha_cluster_master_host    # run only on master node
