@@ -1,6 +1,6 @@
 ---
 # cluster config
-postgres_ha_cluster_master_host: "{{ play_hosts[0] }}"     # sync all DB slaves from this master node (set to first node if not defined)
+postgres_ha_cluster_master_host: "{{ ansible_play_batch[0] }}"     # sync all DB slaves from this master node (set to first node if not defined)
 postgres_ha_cluster_name: 'pgcluster'                      # name of the pcs cluster
 postgres_ha_cluster_vip:  10.20.30.40                      # floating IP that will be used to connect to clustered DB (always follows the master)
 postgres_ha_cluster_vip_mask: 24                           # floating IP netmask
@@ -23,8 +23,8 @@ postgres_ha_pg_bindir: "/usr/pgsql-{{ postgres_ha_pg_version }}/bin"        # wh
 
 postgres_ha_postgresql_conf_vars:                          # When altering this variable, please copy all postgresql.conf items specified here \
     listen_addresses: "'*'"                                     # because this whole variable will be overloaded by your new definition. \
-    max_wal_senders: "{{ play_hosts|length * 2 }}"              # You can change also other postgresql.conf variables here, it will work.
-    max_replication_slots: "{{ play_hosts|length * 2 }}"
+    max_wal_senders: "{{ ansible_play_batch|length * 2 }}"              # You can change also other postgresql.conf variables here, it will work.
+    max_replication_slots: "{{ ansible_play_batch|length * 2 }}"
     wal_level: "hot_standby"
     hot_standby: "on"
     wal_log_hints: "on"

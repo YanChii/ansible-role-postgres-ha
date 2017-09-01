@@ -4,6 +4,6 @@
 
 - name: verify postgres_ha_cluster_master_host
   fail:
-    msg: "CRITICAL: defined master host ({{ postgres_ha_cluster_master_host }}) is not in host list ({{ play_hosts }})"
-  when: postgres_ha_cluster_master_host not in play_hosts
+    msg: "CRITICAL: defined master host ({{ postgres_ha_cluster_master_host }}) is not in host list ({{ ansible_play_batch }})"
+  when: postgres_ha_cluster_master_host not in ansible_play_batch
 
