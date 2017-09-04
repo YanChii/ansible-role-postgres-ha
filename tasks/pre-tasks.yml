@@ -7,3 +7,17 @@
     msg: "CRITICAL: defined master host ({{ postgres_ha_cluster_master_host }}) is not in host list ({{ ansible_play_batch }})"
   when: postgres_ha_cluster_master_host not in ansible_play_batch
 
+# Set default os_version.
+# Without os_version set, the role will fail.
+# This is a preparation for multi-OS.
+- name: identify the OS (default)
+  set_fact:
+    os_version: 'centos7'
+
+- name: identify the OS (centos)
+  set_fact:
+    os_version: 'centos{{ ansible_distribution_major_version }}'
+  when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+
+- debug: msg='The OS version is set to {{ os_version }}'
+  run_once: true

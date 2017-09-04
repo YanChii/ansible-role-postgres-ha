@@ -10,11 +10,21 @@
     name: 'postgresql{{ postgres_ha_pg_version | replace(".", "") }}-server, postgresql{{ postgres_ha_pg_version | replace(".", "") }}-contrib, python-psycopg2'
     state: installed
 
-- name: init DB dir on master if necessary
+- name: init DB dir on master if necessary (centos 7)
   shell: '{{ postgres_ha_pg_bindir }}/postgresql{{ postgres_ha_pg_version | replace(".", "") }}-setup initdb'
   args:
     creates: "{{ postgres_ha_pg_data }}/PG_VERSION"
-  when: inventory_hostname == "{{ postgres_ha_cluster_master_host }}"   # run only on one node
+  # run only on one node
+  when: inventory_hostname == postgres_ha_cluster_master_host
+    and os_version == 'centos7'
+
+- name: init DB dir on master if necessary (centos 6)
+  shell: '/etc/init.d/postgresql-{{ postgres_ha_pg_version }} initdb'
+  args:
+    creates: "{{ postgres_ha_pg_data }}/PG_VERSION"
+  # run only on one node
+  when: inventory_hostname == postgres_ha_cluster_master_host
+    and os_version == 'centos6'
 
 # if the file does not exist, DB sync is needed
 - name: check if DB was synchronized before

@@ -17,7 +17,7 @@
 
 # start order constraints
 - name: setting resources start order
-  shell: pcs constraint order start "{{ postgres_ha_cluster_vip_res_name }}" then promote "{{ postgres_ha_cluster_pg_HA_res_name }}" symmetrical=false
+  shell: pcs constraint order promote "{{ postgres_ha_cluster_pg_HA_res_name }}" then start "{{ postgres_ha_cluster_vip_res_name }}" symmetrical=false
   when: inventory_hostname == "{{ postgres_ha_cluster_master_host }}"   # run only on one node
 
 - name: setting resources stop order

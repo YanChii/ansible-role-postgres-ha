@@ -3,15 +3,24 @@
 - debug: msg='cluster_members={{ansible_play_batch}}'
   run_once: true
 
-- name: "Build hosts file"
-  lineinfile: dest=/etc/hosts regexp='.*{{ item }}$' line="{{ hostvars[item].ansible_default_ipv4.address }} {{ item }}" state=present
-  when: hostvars[item].ansible_default_ipv4.address is defined
-  with_items: "{{ansible_play_batch}}"
-
 - name: install cluster pkgs
   yum:
     name: pcs
     state: present
+
+- name: install additional cluster pkgs for centos 6
+  yum:
+    name: '{{ item }}'
+    state: present
+  when: os_version == 'centos6'
+  with_items:
+    - pacemaker
+    - libselinux-python
+
+- name: "Build hosts file"
+  lineinfile: dest=/etc/hosts regexp='.*{{ item }}$' line="{{ hostvars[item].ansible_default_ipv4.address }} {{ item }}" state=present
+  when: hostvars[item].ansible_default_ipv4.address is defined
+  with_items: "{{ ansible_play_batch }}"
 
 - name: service pcsd start                         
   service: name=pcsd state=started enabled=yes
@@ -26,22 +35,36 @@
 - name: setup cluster auth
   shell: pcs cluster auth {{ ansible_play_batch | join( " ") }} -u hacluster -p "{{ postgres_ha_cluster_ha_password }}"
 
-- name: create cluster
+# We create cluster in two steps:
+# 1. create one-node cluster
+# 2. join other cluster nodes (the task below)
+# The reason is that we want to support adding new nodes by re-running the role.
+- name: create cluster (centos7)
   #shell: pcs cluster setup --name {{ postgres_ha_cluster_name }} {{ ansible_play_batch | join( " ") }}
   shell: pcs cluster setup --name {{ postgres_ha_cluster_name }} "{{ postgres_ha_cluster_master_host }}"
-  when: inventory_hostname == "{{ postgres_ha_cluster_master_host }}"   # run only on one node
   args:
     creates: /etc/corosync/corosync.conf
+  when: os_version == 'centos7' and
+        inventory_hostname == postgres_ha_cluster_master_host   # run only on master node
 
-- name: join cluster nodes
+- name: create cluster (centos6)
+  shell: pcs cluster setup --name {{ postgres_ha_cluster_name }} "{{ postgres_ha_cluster_master_host }}"
+  args:
+    creates: /etc/cluster/cluster.conf
+  when: os_version == 'centos6' and
+        inventory_hostname == postgres_ha_cluster_master_host    # run only on master node
+
+- name: join cluster nodes (centos7)
   shell: /bin/sh -c "if ! grep -q 'ring0_addr[:] *{{ item }}[\t ]*$' /etc/corosync/corosync.conf; then pcs cluster node add {{ item }}; fi"
-  when: inventory_hostname == "{{ postgres_ha_cluster_master_host }}"             # run only on one node
   with_items: '{{ ansible_play_batch | difference([inventory_hostname]) }}'   # all hosts except me
-  register: join_cluster
+  when: os_version == 'centos7' and
+        inventory_hostname == postgres_ha_cluster_master_host    # run only on master node
 
-#- name: alter votequorum config
-#  template: src=corosync.conf.j2 dest=/etc/corosync/corosync.conf
-#  notify: restart corosync
+- name: join cluster nodes (centos6)
+  shell: /bin/sh -c "if ! grep -q '<clusternode .*name=\"{{ item }}\"' /etc/cluster/cluster.conf; then pcs cluster node add {{ item }}; fi"
+  with_items: '{{ ansible_play_batch | difference([inventory_hostname]) }}'   # all hosts except me
+  when: os_version == 'centos6' and
+        inventory_hostname == postgres_ha_cluster_master_host    # run only on master node
 
 # start cluster on every node separately (can be run multiple times without failure)
 - name: start cluster
