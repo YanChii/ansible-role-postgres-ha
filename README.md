@@ -1,7 +1,7 @@
 postgres-ha
 ===========
 
-With this role, you will transform your standalone postgresql server to N-node postgres cluster with automated failover. You only need one working postgresql server and other hosts with clean CentOS 7 minimal install.
+With this role, you will transform your standalone postgresql server to N-node postgres cluster with automated failover. You only need one working postgresql server and other hosts with clean CentOS 7 or CentOS 6 minimal install.
 
 Alternatively, this role can create a database cluster for you from scratch. If no postgres database is detected, it will be created.
 
@@ -45,9 +45,9 @@ What you should know
 Requirements
 ------------
 
-This role works on CentOS 7. RHEL was not tested but should work without problem. If you need support for other distribution, I can help. Post an issue.
+This role works on CentOS 6 and 7. RHEL was not tested but should work without problem. If you need support for other distribution, I can help. Post an issue.
 
-The postgresql binaries on primary server should be installed from the official repository:
+The postgresql binaries on your primary server should be installed from the official repository:
 
 https://yum.postgresql.org/repopackages.php
 
