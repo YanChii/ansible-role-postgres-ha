@@ -13,9 +13,11 @@
 - name: identify the OS (default)
   set_fact:
     os_version: 'centos7'
-  when: ansible_distribution is not defined
 
 - name: identify the OS (centos)
   set_fact:
     os_version: 'centos{{ ansible_distribution_major_version }}'
   when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+
+- debug: msg='The OS version is set to {{ os_version }}'
+  run_once: true
