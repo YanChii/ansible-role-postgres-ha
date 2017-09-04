@@ -84,7 +84,7 @@
     options:
       master-max      : 1
       master-node-max : 1
-      clone-max       : "{{ play_hosts|length }}"
+      clone-max       : "{{ ansible_play_batch|length }}"
       clone-node-max  : 1
       notify          : true
 

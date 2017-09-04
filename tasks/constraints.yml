@@ -2,11 +2,11 @@
 
 # location constraints
 - name: setting VIP location constraints
-  shell: pcs constraint location "{{ postgres_ha_cluster_vip_res_name }}" prefers {% for clhost in play_hosts %}{{clhost}}=100 {% endfor %}
+  shell: pcs constraint location "{{ postgres_ha_cluster_vip_res_name }}" prefers {% for clhost in ansible_play_batch %}{{clhost}}=100 {% endfor %}
   when: inventory_hostname == "{{ postgres_ha_cluster_master_host }}"   # run only on one node
 
 - name: setting DB location constraints
-  shell: pcs constraint location "{{ postgres_ha_cluster_pg_HA_res_name }}" prefers {% for clhost in play_hosts %}{{clhost}}=100 {% endfor %}
+  shell: pcs constraint location "{{ postgres_ha_cluster_pg_HA_res_name }}" prefers {% for clhost in ansible_play_batch %}{{clhost}}=100 {% endfor %}
   when: inventory_hostname == "{{ postgres_ha_cluster_master_host }}"   # run only on one node
 
 
