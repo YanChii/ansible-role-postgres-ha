@@ -45,7 +45,7 @@
     regexp='^host    postgres .*{{ hostvars[item].ansible_default_ipv4.address }}/32'
     insertbefore='^host'
     line='host    postgres       {{ postgres_ha_pg_repl_user }}    {{ hostvars[item].ansible_default_ipv4.address }}/32          md5'
-  with_items: "{{ play_hosts }}"
+  with_items: "{{ ansible_play_batch }}"
   when: inventory_hostname == "{{ postgres_ha_cluster_master_host }}" or
         db_prevsync_file.stat.exists
         # run only on master node or on synchronized slave
@@ -56,7 +56,7 @@
     regexp='^host    replication .*{{ hostvars[item].ansible_default_ipv4.address }}/32'
     insertbefore='^host'
     line='host    replication     {{ postgres_ha_pg_repl_user }}    {{ hostvars[item].ansible_default_ipv4.address }}/32          md5'
-  with_items: "{{ play_hosts }}"
+  with_items: "{{ ansible_play_batch }}"
   when: inventory_hostname == "{{ postgres_ha_cluster_master_host }}" or
         db_prevsync_file.stat.exists
         # run only on master node or on synchronized slave
@@ -83,7 +83,7 @@
 
 - name: setup .pgpass replication auth for other IPs
   lineinfile: dest="~postgres/.pgpass" line="{{ hostvars[item].ansible_default_ipv4.address }}:{{ postgres_ha_pg_port }}:replication:{{ postgres_ha_pg_repl_user }}:{{ postgres_ha_pg_repl_pass }}" state=present
-  with_items: "{{play_hosts}}"
+  with_items: "{{ansible_play_batch}}"
   args:
     owner: postgres
     group: postgres
@@ -215,6 +215,6 @@
   register: slavecount
   vars:
     ansible_ssh_pipelining: no
-  until: (slavecount.stdout|string) == ((play_hosts|length - 1)|string)
+  until: (slavecount.stdout|string) == ((ansible_play_batch|length - 1)|string)
   retries: 15
   delay: 2

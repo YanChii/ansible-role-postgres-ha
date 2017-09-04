@@ -16,7 +16,7 @@
   register: slavecount
   vars:
     ansible_ssh_pipelining: no
-  until: (slavecount.stdout|string) == ((play_hosts|length - 1)|string)
+  until: (slavecount.stdout|string) == ((ansible_play_batch|length - 1)|string)
   retries: 16
   delay: 2
 
