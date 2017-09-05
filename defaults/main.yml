@@ -9,6 +9,9 @@ postgres_ha_cluster_pg_res_name: 'postgres'                # slave DB cluster re
 postgres_ha_cluster_pg_HA_res_name: 'postgres-ha'          # master DB cluster resource name (this name is used to manage postgres resource)
 postgres_ha_pg_port:  5432
 
+postgres_ha_monitor_interval_pgmaster: '15s'               # Frequency of checking if master PG instance is alive
+postgres_ha_monitor_interval_pgslave: '16s'                # Frequency of checking if slave PG instance is alive
+
 # auth config
 postgres_ha_pg_repl_user: replicator                       # database user used for replication
 postgres_ha_pg_repl_pass: rybKath3KeckGov1

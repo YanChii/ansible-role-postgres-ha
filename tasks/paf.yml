@@ -68,12 +68,12 @@
           timeout: 60s
       - action: monitor
         options:
-          interval: 15s
+          interval: "{{ postgres_ha_monitor_interval_pgmaster }}"
           timeout: 10s
           role: Master
       - action: monitor
         options:
-          interval: 16s
+          interval: "{{ postgres_ha_monitor_interval_pgslave }}"
           timeout: 10s
           role: Slave
 

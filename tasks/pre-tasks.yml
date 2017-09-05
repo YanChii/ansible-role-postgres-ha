@@ -21,3 +21,8 @@
 
 - debug: msg='The OS version is set to {{ os_version }}'
   run_once: true
+
+- name: verify PG cluster monitor intervals
+  fail:
+    msg: 'Paremeters "postgres_ha_monitor_interval_pgmaster" and "postgres_ha_monitor_interval_pgslave" cannot have the same value!'
+  when: postgres_ha_monitor_interval_pgmaster == postgres_ha_monitor_interval_pgslave
