@@ -124,15 +124,15 @@ systemctl status postgresql-9.6
 ps aux | grep postgres
 rm -rf /var/lib/pgsql/9.6/data
 rm -f /var/lib/pgsql/9.6/recovery.conf.pgcluster.pcmk
-rm -f /var/lib/pgsql/9.6/.postgres_constraints_processed   # used postgres_ha_cluster_pg_res_name
+rm -f /var/lib/pgsql/9.6/.*_constraints_processed   # name generated from postgres_ha_cluster_pg_res_name
 ```
 - RUN ONLY ON MASTER NODE:
 ```
 systemctl stop postgresql-9.6
 rm -f /var/lib/pgsql/9.6/recovery.conf.pgcluster.pcmk
+rm -f /var/lib/pgsql/9.6/.*_constraints_processed
 rm -f /var/lib/pgsql/9.6/data/recovery.conf
 rm -f /var/lib/pgsql/9.6/data/.synchronized
-rm -f /root/.constraints_processed
 # Make sure no postgres db is running.
 ps aux | grep postgres
 systemctl start postgresql-9.6
