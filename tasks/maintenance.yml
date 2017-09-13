@@ -1,0 +1,26 @@
+# vim: set filetype=yaml expandtab tabstop=2 shiftwidth=2 softtabstop=2 background=dark :
+
+- name: create cluster maintenance directory
+  file:
+    path: "{{ postgres_ha_maint_scripts_path }}"
+    state: directory
+    owner: postgres
+    group: postgres
+    mode: 0755
+
+- name: create servers IP list
+  set_fact:
+    all_ips: ""
+
+- name: append servers IP list
+  set_fact: 
+    all_ips: "{% if all_ips != '' %}{{ all_ips }} {% endif %}{{ hostvars[item].ansible_default_ipv4.address }}"
+  with_items: "{{ ansible_play_batch }}"
+
+- name: generate cluster maintenance scripts
+  template: src="{{ item }}" dest="{{ postgres_ha_maint_scripts_path }}/{{ item | basename | regex_replace('\.j2$', '') }}"
+  args:
+    owner: postgres
+    group: postgres
+    mode:  0750
+  with_fileglob: "{{ role_path }}/templates/maint/*"

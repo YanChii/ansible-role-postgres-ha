@@ -1,0 +1,167 @@
+#!/bin/sh
+
+if [ $(whoami) != "postgres" ]; then 
+	echo "Please run this script as user postgres!"
+	exit 1
+fi
+
+CLUSTER_NAME="{{ postgres_ha_cluster_name }}"
+DBMASTER_IP="{{ postgres_ha_cluster_vip }}"
+DBPORT="{{ postgres_ha_pg_port }}"
+PGDATA="{{ postgres_ha_pg_data }}"
+PGBINDIR="{{ postgres_ha_pg_bindir }}"
+DBVERSION="{{ postgres_ha_pg_version }}"
+REPL_USER="{{ postgres_ha_pg_repl_user }}"
+CLUSTER_RES_NAME="{{ postgres_ha_cluster_pg_HA_res_name }}"
+RECOVERY_TEMPLATE="$(dirname "${PGDATA}")/recovery.conf.${CLUSTER_NAME}.pcmk"
+RECOVERY_DEST="${PGDATA}/recovery.conf"
+
+# usage: if check_reply_yes "Some question?"; then echo yes; else echo no; fi
+function check_reply_yes()
+{
+	echo -n "*** $1 (Y/n)"
+	read reply
+	if [[ -z "$reply" ]] || [[ $reply == "y" ]] || [[ $reply == "Y" ]]
+	then
+		return 0
+	else
+		return 1
+	fi
+}
+
+function check_retval()
+{
+	retval=$?
+	if [ $retval -ne 0 ]
+	then
+		echo
+		echo "***** Error in module $1 *****"
+		echo
+		exit $retval
+	fi
+}
+
+
+#######################################################################################
+# PROGRAM START
+#######################################################################################
+
+PGDATA=${PGDATA%%+(/)}	# remove trailing slash
+cat << EOF
+****************************************************************************************
+This script will sync postgresql datadir from master. It can also be used to convert
+a failed master node to slave and reconnect it to the cluster.
+Please make sure that postgres database is not running on this node!
+Cluster command to shut down database locally (for 60 minutes):
+pcs resource ban $CLUSTER_RES_NAME {{ inventory_hostname }} lifetime=PT60M
+And to bring it up before lifetime expiration:
+pcs resource clear $CLUSTER_RES_NAME {{ inventory_hostname }}
+
+Cluster parameters:
+CLUSTER NAME: $CLUSTER_NAME
+DB MASTER IP: $DBMASTER_IP
+DB PORT:      $DBPORT
+PG DATADIR:   $PGDATA
+
+EOF
+
+# check if the master IP is on this host (makes no sense to sync from myself)
+if /usr/sbin/ip addr show | grep -q "[ \t]$DBMASTER_IP/"; then
+    echo "THIS IS THE MASTER NODE!!!"
+    echo "Aborting action."
+    exit 111
+fi
+
+# check if master DB is running
+if ! ${PGBINDIR}/pg_isready -qh "$DBMASTER_IP" -p "$DBPORT" -U "$REPL_USER"; then
+    echo "The master database is not responding!"
+    echo "Aborting action."
+    exit 112
+fi
+
+# checks succeeded, we are ready to run the sync
+if ! check_reply_yes "Continue?"; then
+	echo
+	echo "Exiting without changes.."
+	exit 0
+fi
+echo "****************************************************************************************"
+echo
+
+
+if ps auxww | grep -v grep | grep -Eq -- "-D +${PGDATA}( |$)"; then
+	echo "**************************************************"
+	echo "Postgresql server is still running. Stop it first!"
+	echo "**************************************************"
+	exit 1
+fi
+if ${PGBINDIR}/pg_ctl -D "$PGDATA" status > /dev/null; then
+	echo "***********************************"
+	echo "Postgresql server is still running!"
+	echo "***********************************"
+	
+	echo ${PGBINDIR}/pg_ctl -D "$PGDATA" status
+	${PGBINDIR}/pg_ctl -D "$PGDATA" status
+	echo
+	echo Please stop the database and run this script again.
+	exit 1
+fi
+
+OLD_PGDATA="${PGDATA}.backup-$(date +%Y%m%d%H%M)"
+if [ -d ${PGDATA} ]; then
+	if ! check_reply_yes "Remove old datadir? (n = rename old datadir)"; then
+		echo "Moving old datadir.."
+		echo mv ${PGDATA} ${OLD_PGDATA}
+		mv ${PGDATA} ${OLD_PGDATA}
+		check_retval rename_old_dir
+	else
+		echo "Removing old datadir.."
+		echo rm -rf ${PGDATA}
+		rm -rf "${PGDATA}"
+		check_retval delete_old_dir
+	fi
+else
+	echo "Old datadir ${PGDATA} does not exist. Continuing without backing it up."
+	echo
+fi
+echo
+echo "Cloning the DB:"
+echo pg_basebackup -h $DBMASTER_IP -D "$PGDATA" -X stream -P -p $DBPORT -U $REPL_USER
+pg_basebackup -h $DBMASTER_IP -D "$PGDATA" -X stream -P -p $DBPORT -U $REPL_USER
+check_retval clone_DB
+echo
+echo Writing recovery.conf
+echo cp -f "${RECOVERY_TEMPLATE}" "${RECOVERY_DEST}"
+
+cp -f "${RECOVERY_TEMPLATE}" "${RECOVERY_DEST}"
+
+echo Altering pg_hba.conf to forbid self-replication
+# permit all hosts first
+sed -ri'' -e 's,^(host    replication .*({{ all_ips.split(" ") | join("|") }})/32 *)(reject|md5),\1md5,g' "${PGDATA}/pg_hba.conf"
+# deny myself
+sed -ri'' -e 's,^(host    replication .*({{ hostvars[inventory_hostname].ansible_default_ipv4.address }})/32 *)md5,\1reject,g' "${PGDATA}/pg_hba.conf"
+
+cat << EOF
+Slave database cloned successfully.
+
+You can start it now:
+pcs resource clear $CLUSTER_RES_NAME {{ inventory_hostname }}
+
+Or (in case of emergency) manually by command:
+${PGBINDIR}/pg_ctl -D "$PGDATA" start
+
+Also check logs:
+tail -f ${PGDATA}/pg_log/\$(cd ${PGDATA}/pg_log; ls -1 | tail -1)
+or
+journalctl --follow
+
+EOF
+
+if [ -d ${OLD_PGDATA} ]; then
+	echo "Old datadir can be safely removed:"
+	echo "rm -rf ${OLD_PGDATA}"
+	echo
+fi
+echo May the Force be with you..
+echo
+exit 0
