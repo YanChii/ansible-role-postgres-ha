@@ -107,11 +107,12 @@ if ${PGBINDIR}/pg_ctl -D "$PGDATA" status > /dev/null; then
 	exit 1
 fi
 
+OLD_PGDATA="${PGDATA}.backup-$(date +%Y%m%d%H%M)"
 if [ -d ${PGDATA} ]; then
-	if ! check_reply_yes "Remove old datadir? (n = rename and keep)"; then
+	if ! check_reply_yes "Remove old datadir? (n = rename old datadir)"; then
 		echo "Moving old datadir.."
-		echo mv ${PGDATA} ${PGDATA}.oldmaster-$(date +%Y%m%d)
-		mv ${PGDATA} ${PGDATA}.oldmaster-$(date +%Y%m%d)
+		echo mv ${PGDATA} ${OLD_PGDATA}
+		mv ${PGDATA} ${OLD_PGDATA}
 		check_retval rename_old_dir
 	else
 		echo "Removing old datadir.."
@@ -156,9 +157,9 @@ journalctl --follow
 
 EOF
 
-if [ -d ${PGDATA}.oldmaster-$(date +%Y%m%d) ]; then
+if [ -d ${OLD_PGDATA} ]; then
 	echo "Old datadir can be safely removed:"
-	echo "rm -rf ${PGDATA}.oldmaster-$(date +%Y%m%d)"
+	echo "rm -rf ${OLD_PGDATA}"
 	echo
 fi
 echo May the Force be with you..
