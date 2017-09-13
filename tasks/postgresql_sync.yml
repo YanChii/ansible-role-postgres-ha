@@ -59,7 +59,7 @@
   when: inventory_hostname == "{{ postgres_ha_cluster_master_host }}" or
         db_prevsync_file.stat.exists
         # run only on master node or on synchronized slave
-  notify: reload postgresql
+  register: alter_pg_acl
 
 - name: alter DB replication ACL in pg_hba.conf on master
   lineinfile: dest="{{ postgres_ha_pg_data }}/pg_hba.conf"
@@ -70,9 +70,7 @@
   when: inventory_hostname == "{{ postgres_ha_cluster_master_host }}" or
         db_prevsync_file.stat.exists
         # run only on master node or on synchronized slave
-  notify: reload postgresql
-
-- meta: flush_handlers
+  register: alter_repl_acl
 
 #hostname:port:database:username:password
 - name: setup DB cluster auth (master IP)
@@ -139,11 +137,19 @@
   register: db_resource_exists
   ignore_errors: True
 
-- name: start master DB if necessary (without cluster)
-  service: name="{{ postgres_ha_pg_systemd_svcname }}" state=started enabled=yes
-  when: (inventory_hostname == "{{ postgres_ha_cluster_master_host }}") and
-        (db_resource_exists|failed) and
-        (db_running|failed)
+- name: reload DB ACLs
+  shell: "{{ postgres_ha_pg_bindir }}/pg_ctl -D {{ postgres_ha_pg_data }} reload"
+  become: yes
+  become_user: postgres
+  vars:
+    ansible_ssh_pipelining: no
+  when: (alter_pg_acl.changed or alter_repl_acl.changed) and db_running|succeeded
+
+#- name: start master DB if necessary (without cluster)
+#  service: name="{{ postgres_ha_pg_systemd_svcname }}" state=started enabled=yes
+#  when: (inventory_hostname == "{{ postgres_ha_cluster_master_host }}") and
+#        (db_resource_exists|failed) and
+#        (db_running|failed)
 
 # if DB is clustered and is not running, we have a problem.. try at least cleaning the resource status
 - name: start master DB if necessary (in cluster)
@@ -151,15 +157,6 @@
   when: (inventory_hostname == "{{ postgres_ha_cluster_master_host }}") and
         (db_resource_exists|succeeded) and
         (db_running|failed)
-
-#- name: create test db
-#  postgresql_db: name=testDB
-#  port: "{{ postgres_ha_pg_port }}"
-#  become: yes
-#  become_user: postgres
-#  vars:
-#    ansible_ssh_pipelining: no
-#  when: inventory_hostname == "{{ postgres_ha_cluster_master_host }}"   # run only on one node
 
 - name: setup DB replication auth
   postgresql_user:
