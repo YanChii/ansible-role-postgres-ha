@@ -1,8 +1,29 @@
 # vim: set filetype=yaml expandtab tabstop=2 shiftwidth=2 softtabstop=2 background=dark :
 
+# the name of the rpm file that imports the pg repo depends on the OS family and on the pg version
+# it sets the last version digit of the repo file (e.g 9.6-3)
+- name: set pg repo rpm version suffix (v9.x)
+  set_fact:
+    pg_pkg_vers_suffix: '3'
+
+- name: set pg repo rpm version suffix for (v10)
+  set_fact:
+    pg_pkg_vers_suffix: '2'
+  when: postgres_ha_pg_version == '10'
+
+- name: determine the correct postgres package name (all systems)
+  set_fact:
+    pg_pkg_name: 'pgdg-centos{{ postgres_ha_pg_version | replace(".", "") }}-{{ postgres_ha_pg_version }}-{{ pg_pkg_vers_suffix }}.noarch.rpm'
+  #when: ansible_distribution == 'CentOS'  # this is default
+
+- name: determine the correct postgres package name (RHEL)
+  set_fact:
+    pg_pkg_name: 'pgdg-redhat{{ postgres_ha_pg_version | replace(".", "") }}-{{ postgres_ha_pg_version }}-{{ pg_pkg_vers_suffix }}.noarch.rpm'
+  when: ansible_distribution == 'Red Hat Enterprise Linux'
+
 - name: 'import pg{{ postgres_ha_pg_version | replace(".", "") }} repo'
   yum:
-    name: 'https://download.postgresql.org/pub/repos/yum/{{ postgres_ha_pg_version }}/redhat/rhel-7-x86_64/pgdg-centos{{ postgres_ha_pg_version | replace(".", "") }}-{{ postgres_ha_pg_version }}-3.noarch.rpm'
+    name: 'https://download.postgresql.org/pub/repos/yum/{{ postgres_ha_pg_version }}/redhat/rhel-7-x86_64/{{ pg_pkg_name }}'
     state: installed
 
 - name: 'install pg{{ postgres_ha_pg_version | replace(".", "") }}'
