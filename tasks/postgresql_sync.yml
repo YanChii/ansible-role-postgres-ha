@@ -1,7 +1,7 @@
 # vim: set filetype=yaml expandtab tabstop=2 shiftwidth=2 softtabstop=2 background=dark :
 
-# the name of the rpm file that imports the pg repo depends on the OS family and on the pg version
-# it sets the last version digit of the repo file (e.g 9.6-3)
+# The name of the rpm file that imports the pg repo depends on the OS family and on the pg version.
+# This variable sets the last version digit of the repo file (e.g 9.6-3).
 - name: set pg repo rpm version suffix (v9.x)
   set_fact:
     pg_pkg_vers_suffix: '3'
