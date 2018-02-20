@@ -42,13 +42,13 @@ postgres_ha_mcast_enable: False                            # Enable cluster comm
                                                                 # For mcast to work, you need to set postgres_ha_network_rings. \
                                                                 # Centos6: It is recommended to enable multicast. You need at least 2 postgres_ha_network_rings.
 
-postgres_ha_pcs_advanced_params:                           # Additional parameters for "pcs cluster setup" command. Ignored params: 'addr0', 'addr1', 'addr2', \
-                                                                # 'addr3', 'transport' (they are set by postgres_ha_mcast_enable)
+postgres_ha_pcs_advanced_params:                           # Additional parameters for "pcs cluster setup" command.
 #    token: 1000
 #    mcast0: '239.255.1.1'                                 # these are the default mcast addresses for the respective cluster network rings
 #    mcast1: '255.239.2.1'
 #    mcastport0: 5405
 #    mcastport1: 5405
+#Ignored params: 'addr0', 'addr1', 'addr2', 'addr3', 'transport' (they are set by postgres_ha_mcast_enable)
 
 postgres_ha_gui_enable: False                              # enable GUI on all hosts (one host is sufficient for GUI to work \
                                                                 # but when it goes down, you loose the GUI) on https port 2224
