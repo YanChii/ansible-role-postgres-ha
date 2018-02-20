@@ -35,8 +35,8 @@ postgres_ha_postgresql_conf_vars:                          # When altering this 
 postgres_ha_maint_scripts_path: /var/lib/pgsql/pg-maint    # location where to create user scripts for database administration
 
 postgres_ha_network_rings:                                 # Use multiple networks for cluster interconnection (unicast mode). Defaults to primary NIC.
-#    ring0: "eth0"                                         # primary network
-#    ring1: "eth1"                                         # additional network
+#    ring0: "eth0"                                         # Primary network. The "lowest" string (ASCII compare) will be selected as the primary network ring.
+#    ring1: "eth1"                                         # Additional network. You can use any names instead of "ring*". These will be appended to a hostname.
 
 postgres_ha_mcast_enable: False                            # Enable cluster communication using multicast (sets transport=udp, rrpmode=passive). \
                                                                 # For mcast to work, you need to setup addr* params in postgres_ha_pcs_advanced_params.
@@ -50,5 +50,5 @@ postgres_ha_pcs_advanced_params:                           # additional paramete
 #    mcastport0: 5405
 #    mcastport1: 5405
 
-postgres_ha_gui_enable: True                               # enable GUI on all hosts (one host is sufficient for GUI to work \
+postgres_ha_gui_enable: False                              # enable GUI on all hosts (one host is sufficient for GUI to work \
                                                                 # but when it goes down, you loose the GUI) on https port 2224
