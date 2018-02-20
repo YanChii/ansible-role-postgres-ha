@@ -26,3 +26,8 @@
   fail:
     msg: 'Paremeters "postgres_ha_monitor_interval_pgmaster" and "postgres_ha_monitor_interval_pgslave" cannot have the same value!'
   when: postgres_ha_monitor_interval_pgmaster == postgres_ha_monitor_interval_pgslave
+
+- name: verify multicast variables consistency
+  fail:
+    msg: 'Multicast settings require defining postgres_ha_pcs_advanced_params.addr* variables'
+  when: postgres_ha_mcast_enable and postgres_ha_pcs_advanced_params.addr0 is undefined

@@ -22,6 +22,27 @@
   when: hostvars[item].ansible_default_ipv4.address is defined
   with_items: "{{ ansible_play_batch }}"
 
+# For each host add hostnames for all postgres_ha_network_rings interfaces to /etc/hosts
+# example output: "10.10.90.200 myhost-ring1"
+- name: add additional network rings to hosts file
+  lineinfile: dest=/etc/hosts regexp='.*{{ item[0] }}-{{ item[1] }}$' line="{{ hostvars[item[0]][['ansible_', postgres_ha_network_rings[item[1]]]|join]['ipv4']['address'] }} {{ item[0] }}-{{ item[1] }}" state=present
+  with_nested:
+    - "{{ ansible_play_batch }}"
+    - "{{ postgres_ha_network_rings }}
+  when: postgres_ha_network_rings and
+        (not postgres_ha_mcast_enable) and
+        hostvars[item[0]][['ansible_', postgres_ha_network_rings[item[1]]]|join] is defined
+
+# create hostname string for "pcs cluster" command that lists also all ring hostnames (if exist)
+# example: "node01,node01-ring1"
+# ("ring0" is omitted in first name and actual inventory_hostname is used as a default name)
+- name: generate pcs hostname string
+  set_fact:
+    pcs_hostname: "{{ inventory_hostname }}{% if postgres_ha_network_rings %}{% for ring in postgres_ha_network_rings|difference(['ring0']) %},{{ inventory_hostname }}-{{ ring }}{% endfor %}{% endif %}"
+
+- name: enable GUI if required
+  lineinfile: dest=/etc/sysconfig/pcsd regexp='^PCSD_DISABLE_GUI=' line="PCSD_DISABLE_GUI={% if postgres_ha_gui_enable %}false{% else %}true{% endif %}" state=present
+
 - name: service pcsd start                         
   service: name=pcsd state=started enabled=yes
 
@@ -40,28 +61,27 @@
 # 2. join other cluster nodes (the task below)
 # The reason is that we want to support adding new nodes by re-running the role.
 - name: create cluster (centos7)
-  #shell: pcs cluster setup --name {{ postgres_ha_cluster_name }} {{ ansible_play_batch | join( " ") }}
-  shell: pcs cluster setup --name {{ postgres_ha_cluster_name }} "{{ postgres_ha_cluster_master_host }}"
+  shell: pcs cluster setup --name {{ postgres_ha_cluster_name }} "{{ pcs_hostname }}" {% for param in postgres_ha_pcs_advanced_params %}--{{ param }} {{ postgres_ha_pcs_advanced_params[param] }} {% endfor %} {% if postgres_ha_mcast_enable %}--transport udp{% endif %}
   args:
     creates: /etc/corosync/corosync.conf
   when: os_version == 'centos7' and
         inventory_hostname == postgres_ha_cluster_master_host   # run only on master node
 
 - name: create cluster (centos6)
-  shell: pcs cluster setup --name {{ postgres_ha_cluster_name }} "{{ postgres_ha_cluster_master_host }}"
+shell: pcs cluster setup --name {{ postgres_ha_cluster_name }} "{{ pcs_hostname }}" {% for param in postgres_ha_pcs_advanced_params %}--{{ param }} {{ postgres_ha_pcs_advanced_params[param] }} {% endfor %} {% if postgres_ha_mcast_enable %}--transport udp{% else %}--transport udpu{% endif %}
   args:
     creates: /etc/cluster/cluster.conf
   when: os_version == 'centos6' and
         inventory_hostname == postgres_ha_cluster_master_host    # run only on master node
 
 - name: join cluster nodes (centos7)
-  shell: /bin/sh -c "if ! grep -q 'ring0_addr[:] *{{ item }}[\t ]*$' /etc/corosync/corosync.conf; then pcs cluster node add {{ item }}; fi"
+  shell: /bin/sh -c "if ! grep -q 'ring0_addr[:] *{{ item }}[\t ]*$' /etc/corosync/corosync.conf; then pcs cluster node add {{ hostvars[item]['pcs_hostname'] }}; fi"
   with_items: '{{ ansible_play_batch | difference([inventory_hostname]) }}'   # all hosts except me
   when: os_version == 'centos7' and
         inventory_hostname == postgres_ha_cluster_master_host    # run only on master node
 
 - name: join cluster nodes (centos6)
-  shell: /bin/sh -c "if ! grep -q '<clusternode .*name=\"{{ item }}\"' /etc/cluster/cluster.conf; then pcs cluster node add {{ item }}; fi"
+  shell: /bin/sh -c "if ! grep -q '<clusternode .*name=\"{{ item }}\"' /etc/cluster/cluster.conf; then pcs cluster node add {{ hostvars[item]['pcs_hostname'] }}; fi"
   with_items: '{{ ansible_play_batch | difference([inventory_hostname]) }}'   # all hosts except me
   when: os_version == 'centos6' and
         inventory_hostname == postgres_ha_cluster_master_host    # run only on master node
