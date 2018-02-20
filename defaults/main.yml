@@ -34,7 +34,7 @@ postgres_ha_postgresql_conf_vars:                          # When altering this 
 
 postgres_ha_maint_scripts_path: /var/lib/pgsql/pg-maint    # location where to create user scripts for database administration
 
-postgres_ha_network_rings:                                 # Use multiple networks for cluster interconnection (unicast mode). Defaults to primary NIC.
+postgres_ha_network_rings:                                 # Use multiple networks for cluster interconnection. Defaults to primary NIC.
 #    ring0: "eth0"                                         # Primary network. The "lowest" string (ASCII compare) will be selected as the primary network ring.
 #    ring1: "eth1"                                         # Additional network. You can use any names instead of "ring*". These will be appended to a hostname.
 
