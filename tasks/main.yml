@@ -4,16 +4,16 @@
 - include: pre-tasks.yml
 - include: pcs.yml
 - include: vip.yml
-- include: postgresql_sync.yml
-- include: paf.yml
-
-- name: test constraints presence
-  stat: path="/var/lib/pgsql/{{ postgres_ha_pg_version }}/.{{postgres_ha_cluster_name}}_constraints_processed"
-  register: constraints_processed
-
-- include: constraints.yml
-  when: not constraints_processed.stat.exists
-
-- include: finalize.yml
-
-- include: maintenance.yml
+#- include: postgresql_sync.yml
+#- include: paf.yml
+#
+#- name: test constraints presence
+#  stat: path="/var/lib/pgsql/{{ postgres_ha_pg_version }}/.{{postgres_ha_cluster_name}}_constraints_processed"
+#  register: constraints_processed
+#
+#- include: constraints.yml
+#  when: not constraints_processed.stat.exists
+#
+#- include: finalize.yml
+#
+#- include: maintenance.yml

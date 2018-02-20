@@ -29,5 +29,5 @@
 
 - name: verify multicast variables consistency
   fail:
-    msg: 'Multicast settings require defining postgres_ha_pcs_advanced_params.addr* variables'
+    msg: 'Multicast settings require defining postgres_ha_pcs_advanced_params.addr* variables. See postgres_ha role configuration.'
   when: postgres_ha_mcast_enable and postgres_ha_pcs_advanced_params.addr0 is undefined

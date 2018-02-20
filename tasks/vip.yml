@@ -1,7 +1,7 @@
 # vim: set filetype=yaml expandtab tabstop=2 shiftwidth=2 softtabstop=2 background=dark :
 
 - name: create virtual IP resource
-  when: inventory_hostname == "{{ postgres_ha_cluster_master_host }}"   # run only on one node
+  when: inventory_hostname == postgres_ha_cluster_master_host   # run only on one node
   pcs_resource: command=create resource_id="{{ postgres_ha_cluster_vip_res_name }}" type=ocf:heartbeat:IPaddr2
   args:
     options:
