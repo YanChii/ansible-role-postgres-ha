@@ -39,12 +39,12 @@ postgres_ha_network_rings:                                 # Use multiple networ
 #    ring1: "eth1"                                         # Additional network. You can use any names instead of "ring*". These will be appended to a hostname.
 
 postgres_ha_mcast_enable: False                            # Enable cluster communication using multicast (sets transport=udp, rrpmode=passive). \
-                                                                # For mcast to work, you need to setup addr* params in postgres_ha_pcs_advanced_params.
+                                                                # For mcast to work, you need to set postgres_ha_network_rings. \
+                                                                # Centos6: It is recommended to enable multicast. You need at least 2 postgres_ha_network_rings.
 
-postgres_ha_pcs_advanced_params:                           # additional parameters for "pcs cluster setup" command
+postgres_ha_pcs_advanced_params:                           # Additional parameters for "pcs cluster setup" command. Ignored params: 'addr0', 'addr1', 'addr2', \
+                                                                # 'addr3', 'transport' (they are set by postgres_ha_mcast_enable)
 #    token: 1000
-#    addr0: '10.1.0.0'                                     # example ring0 addr for mcast mode (connect using multiple networks (implies postgres_ha_mcast_enable))
-#    addr1: '10.2.0.0'                                     # example ring1 addr (values are network addresses that identify the respective NICs)
 #    mcast0: '239.255.1.1'                                 # these are the default mcast addresses for the respective cluster network rings
 #    mcast1: '255.239.2.1'
 #    mcastport0: 5405
