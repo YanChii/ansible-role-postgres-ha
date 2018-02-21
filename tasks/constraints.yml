@@ -3,26 +3,26 @@
 # location constraints
 - name: setting VIP location constraints
   shell: pcs constraint location "{{ postgres_ha_cluster_vip_res_name }}" prefers {% for clhost in ansible_play_batch %}{{clhost}}=100 {% endfor %}
-  when: inventory_hostname == "{{ postgres_ha_cluster_master_host }}"   # run only on one node
+  when: inventory_hostname == postgres_ha_cluster_master_host    # run only on one node
 
 - name: setting DB location constraints
   shell: pcs constraint location "{{ postgres_ha_cluster_pg_HA_res_name }}" prefers {% for clhost in ansible_play_batch %}{{clhost}}=100 {% endfor %}
-  when: inventory_hostname == "{{ postgres_ha_cluster_master_host }}"   # run only on one node
+  when: inventory_hostname == postgres_ha_cluster_master_host    # run only on one node
 
 
 # colocation constraints
 - name: setting resources colocation group 1
   shell: pcs constraint colocation add "{{ postgres_ha_cluster_vip_res_name }}" with master "{{ postgres_ha_cluster_pg_HA_res_name }}" INFINITY
-  when: inventory_hostname == "{{ postgres_ha_cluster_master_host }}"   # run only on one node
+  when: inventory_hostname == postgres_ha_cluster_master_host    # run only on one node
 
 # start order constraints
 - name: setting resources start order
   shell: pcs constraint order promote "{{ postgres_ha_cluster_pg_HA_res_name }}" then start "{{ postgres_ha_cluster_vip_res_name }}" symmetrical=false
-  when: inventory_hostname == "{{ postgres_ha_cluster_master_host }}"   # run only on one node
+  when: inventory_hostname == postgres_ha_cluster_master_host    # run only on one node
 
 - name: setting resources stop order
   shell: pcs constraint order demote  "{{ postgres_ha_cluster_pg_HA_res_name }}" then stop  "{{ postgres_ha_cluster_vip_res_name }}" symmetrical=false
-  when: inventory_hostname == "{{ postgres_ha_cluster_master_host }}"   # run only on one node
+  when: inventory_hostname == postgres_ha_cluster_master_host    # run only on one node
 
 - name: marking constraints as processed
   shell: echo "LOCKFILE. Do not delete!" > "/var/lib/pgsql/{{ postgres_ha_pg_version }}/.{{postgres_ha_cluster_name}}_constraints_processed"

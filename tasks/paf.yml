@@ -41,7 +41,7 @@
   service: name="{{ postgres_ha_pg_systemd_svcname }}" state=stopped enabled=false
 
 - name: create database cluster resource
-  when: inventory_hostname == "{{ postgres_ha_cluster_master_host }}"   # run only on one node
+  when: inventory_hostname == postgres_ha_cluster_master_host    # run only on one node
   pcs_resource: command=create resource_id="{{ postgres_ha_cluster_pg_res_name }}" type=ocf:heartbeat:pgsqlms
   args:
     disabled: True
@@ -78,7 +78,7 @@
           role: Slave
 
 - name: create master DB resource
-  when: inventory_hostname == "{{ postgres_ha_cluster_master_host }}"   # run only on one node
+  when: inventory_hostname == postgres_ha_cluster_master_host    # run only on one node
   pcs_resource: command=master resource_id="{{ postgres_ha_cluster_pg_HA_res_name }}" ms_name="{{ postgres_ha_cluster_pg_res_name }}" disabled=True
   args:
     options:
