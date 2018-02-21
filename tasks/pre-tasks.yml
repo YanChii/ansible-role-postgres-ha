@@ -27,7 +27,13 @@
     msg: 'Paremeters "postgres_ha_monitor_interval_pgmaster" and "postgres_ha_monitor_interval_pgslave" cannot have the same value!'
   when: postgres_ha_monitor_interval_pgmaster == postgres_ha_monitor_interval_pgslave
 
-- name: set default network ring
-  set_fact:
-    network_rings: '{% if postgres_ha_network_rings %}{{ postgres_ha_network_rings }}{% else %}{{ { "ring0": ansible_default_ipv4.alias } }}{% endif %}'
+- name: verify specific RRP setting for Centos 6
+  fail:
+    msg: 'Centos 6 requires at least 2 ring interfaces for RRP. Add one more or remove the current interface in postgres_ha_network_rings config parameter.'
+  when: os_version == 'centos6' and postgres_ha_mcast_enable and postgres_ha_network_rings and (postgres_ha_network_rings|length == 1)
+
+# not necessary, cluster automatically selects the default interface
+#- name: set default network ring
+#  set_fact:
+#    network_rings: '{% if postgres_ha_network_rings %}{{ postgres_ha_network_rings }}{% else %}{{ { "ring0": ansible_default_ipv4.alias } }}{% endif %}'
 
