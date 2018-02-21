@@ -33,7 +33,7 @@
 
 #- name: push DB config (clustering)
 #  template: src=postgresql.conf.j2 dest="{{ postgres_ha_pg_data }}/postgresql.conf"
-#  when: inventory_hostname == "{{ postgres_ha_cluster_master_host }}"   # run only on one node
+#  when: inventory_hostname == postgres_ha_cluster_master_host    # run only on one node
 #  args:
 #    owner: postgres
 #    group: postgres
@@ -44,7 +44,7 @@
     dest="{{ postgres_ha_pg_data }}/postgresql.conf"
     regexp="^([# ]*{{ item.key }} *=.*$)"
     replace="{{ item.key }} = {{ item.value }}"
-  when: inventory_hostname == "{{ postgres_ha_cluster_master_host }}"  # run only on master node
+  when: inventory_hostname == postgres_ha_cluster_master_host   # run only on master node
   with_dict: "{{ postgres_ha_postgresql_conf_vars }}"
   notify: restart postgresql
 
@@ -56,7 +56,7 @@
     insertbefore='^host'
     line='host    postgres       {{ postgres_ha_pg_repl_user }}    {{ hostvars[item].ansible_default_ipv4.address }}/32          md5'
   with_items: "{{ ansible_play_batch }}"
-  when: inventory_hostname == "{{ postgres_ha_cluster_master_host }}" or
+  when: inventory_hostname == postgres_ha_cluster_master_host or
         db_prevsync_file.stat.exists
         # run only on master node or on synchronized slave
   register: alter_pg_acl
@@ -67,7 +67,7 @@
     insertbefore='^host'
     line='host    replication     {{ postgres_ha_pg_repl_user }}    {{ hostvars[item].ansible_default_ipv4.address }}/32          {% if item == inventory_hostname %}reject{% else %}md5{% endif %}'
   with_items: "{{ ansible_play_batch }}"
-  when: inventory_hostname == "{{ postgres_ha_cluster_master_host }}" or
+  when: inventory_hostname == postgres_ha_cluster_master_host or
         db_prevsync_file.stat.exists
         # run only on master node or on synchronized slave
   register: alter_repl_acl
@@ -100,7 +100,7 @@
 
 - name: check if master host "{{ postgres_ha_cluster_master_host }}" is really a DB master
   shell: psql -Aqtc "SELECT pg_is_in_recovery()"
-  when: inventory_hostname == "{{ postgres_ha_cluster_master_host }}"   # run only on one node
+  when: inventory_hostname == postgres_ha_cluster_master_host    # run only on one node
   become: yes
   become_user: postgres
   vars:
@@ -115,7 +115,7 @@
     group: postgres
     mode:  0600
     create: yes
-  when: inventory_hostname == "{{ postgres_ha_cluster_master_host }}"   # run only on one node
+  when: inventory_hostname == postgres_ha_cluster_master_host    # run only on one node
   register: create_syncfile
 
 - name: check if DB is running (failure is ok)
@@ -147,14 +147,14 @@
 
 #- name: start master DB if necessary (without cluster)
 #  service: name="{{ postgres_ha_pg_systemd_svcname }}" state=started enabled=yes
-#  when: (inventory_hostname == "{{ postgres_ha_cluster_master_host }}") and
+#  when: (inventory_hostname == postgres_ha_cluster_master_host) and
 #        (db_resource_exists|failed) and
 #        (db_running|failed)
 
 # if DB is clustered and is not running, we have a problem.. try at least cleaning the resource status
 - name: start master DB if necessary (in cluster)
   shell: pcs resource cleanup "{{ postgres_ha_cluster_pg_HA_res_name }}" && sleep 15
-  when: (inventory_hostname == "{{ postgres_ha_cluster_master_host }}") and
+  when: (inventory_hostname == postgres_ha_cluster_master_host) and
         (db_resource_exists|succeeded) and
         (db_running|failed)
 
@@ -169,7 +169,7 @@
   become_user: postgres
   vars:
     ansible_ssh_pipelining: no
-  when: inventory_hostname == "{{ postgres_ha_cluster_master_host }}"   # run only on one node
+  when: inventory_hostname == postgres_ha_cluster_master_host    # run only on one node
 
 #- name: re-check DB datadir
 #  find: paths="{{ postgres_ha_pg_data }}"
@@ -203,7 +203,7 @@
   vars:
     ansible_ssh_pipelining: no
   when: delete_datadir.changed or not db_sync_file.stat.exists
-  #when: (inventory_hostname != "{{ postgres_ha_cluster_master_host }}") and
+  #when: (inventory_hostname != postgres_ha_cluster_master_host) and
   #      (datadir_files.matched|int == 0)
   register: slave_resync
 
@@ -222,12 +222,12 @@
 
 - name: start slave DBs
   service: name="{{ postgres_ha_pg_systemd_svcname }}" state=started enabled=yes
-  when: (inventory_hostname != "{{ postgres_ha_cluster_master_host }}") and
+  when: (inventory_hostname != postgres_ha_cluster_master_host) and
         (db_resource_exists|failed) #and delete_datadir.changed
 
 - name: check if slaves are connected
   shell: psql -Aqtc "SELECT count(*) FROM pg_stat_replication"
-  when: inventory_hostname == "{{ postgres_ha_cluster_master_host }}"   # run only on one node
+  when: inventory_hostname == postgres_ha_cluster_master_host    # run only on one node
   become: yes
   become_user: postgres
   register: slavecount
