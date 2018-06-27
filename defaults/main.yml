@@ -20,6 +20,8 @@ postgres_ha_cluster_ha_password_hash: '$6$MHAki4YS$Nk7O3FEC2G.INznoSUj4ByFgdwFJ8
 
 # postgres config
 postgres_ha_pg_version: 9.6
+import_postgresql_repo: true                               # Enable download of postgresql repo before install
+postgresql_repo_url: 'https://download.postgresql.org/pub/repos/yum/{{ postgres_ha_pg_version }}/redhat/rhel-7-x86_64/{{ pg_pkg_name }}'
 postgres_ha_pg_systemd_svcname: "postgresql-{{ postgres_ha_pg_version }}"   # the name of the original posgres DB resource in systemd
 postgres_ha_pg_data: "/var/lib/pgsql/{{ postgres_ha_pg_version }}/data"     # where can I find PG datadir?
 postgres_ha_pg_bindir: "/usr/pgsql-{{ postgres_ha_pg_version }}/bin"        # where are the PG binaries?
