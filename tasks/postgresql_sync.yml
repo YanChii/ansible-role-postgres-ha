@@ -165,20 +165,20 @@
   become_user: postgres
   vars:
     ansible_ssh_pipelining: no
-  when: (alter_pg_acl.changed or alter_repl_acl.changed) and db_running|succeeded
+  when: (alter_pg_acl.changed or alter_repl_acl.changed) and db_running is succeeded
 
 #- name: start master DB if necessary (without cluster)
 #  service: name="{{ postgres_ha_pg_systemd_svcname }}" state=started enabled=yes
 #  when: (inventory_hostname == postgres_ha_cluster_master_host) and
-#        (db_resource_exists|failed) and
-#        (db_running|failed)
+#        (db_resource_exists is failed) and
+#        (db_running is failed)
 
 # if DB is clustered and is not running, we have a problem.. try at least cleaning the resource status
 - name: start master DB if necessary (in cluster)
   shell: pcs resource cleanup "{{ postgres_ha_cluster_pg_HA_res_name }}" && sleep 15
   when: (inventory_hostname == postgres_ha_cluster_master_host) and
-        (db_resource_exists|succeeded) and
-        (db_running|failed)
+        (db_resource_exists is succeeded) and
+        (db_running is failed)
 
 - name: setup DB replication auth
   postgresql_user:
@@ -205,8 +205,8 @@
 - name: stop slave DB
   service: name="{{ postgres_ha_pg_systemd_svcname }}" state=stopped enabled=false
   when: (not db_sync_file.stat.exists) and
-        (db_resource_exists|failed) and
-        (db_running|succeeded)
+        (db_resource_exists is failed) and
+        (db_running is succeeded)
 
 - name: remove slave DB datadir before sync
   file: state=absent path="{{ postgres_ha_pg_data }}"
@@ -245,7 +245,7 @@
 - name: start slave DBs
   service: name="{{ postgres_ha_pg_systemd_svcname }}" state=started enabled=yes
   when: (inventory_hostname != postgres_ha_cluster_master_host) and
-        (db_resource_exists|failed) #and delete_datadir.changed
+        (db_resource_exists is failed) #and delete_datadir.changed
 
 - name: check if slaves are connected
   shell: psql -Aqtc "SELECT count(*) FROM pg_stat_replication"
