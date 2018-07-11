@@ -23,7 +23,7 @@
 
 - name: 'import pg{{ postgres_ha_pg_version | replace(".", "") }} repo'
   yum:
-    name: postgresql_repo_url
+    name: "{{ postgresql_repo_url }}"
     state: installed
   when: import_postgresql_repo
 
