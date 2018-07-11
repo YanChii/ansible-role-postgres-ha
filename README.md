@@ -51,7 +51,7 @@ The postgresql binaries on your primary server should be installed from the offi
 
 https://yum.postgresql.org/repopackages.php
 
-If you have binaries from other repo, you need to edit the `tasks/postgresql_sync.yml` file (tasks "import pg* repo" and "install pg*") to change the postgres repository source and package names. And maybe also bindir and datadir paths in role variables.
+Note: If you have binaries from other repo, you need to modify the `postgres_ha_repo_url` variable to change the postgres repository source and maybe also bindir and datadir paths in other role variables. If you need to change the installed package name(s), you need to directly modify `install pg*` task in `tasks/postgresql_sync.yml` file.
 
 Role Variables
 --------------
