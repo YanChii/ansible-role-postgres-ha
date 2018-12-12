@@ -229,7 +229,7 @@
 # replicate slave node (assumes firewall is already setup)
 # run only on slave nodes and only when postgres datadir is empty
 - name: synchronize slave databases
-  shell: '{{ postgres_ha_pg_bindir }}/pg_basebackup -h "{{ hostvars[postgres_ha_cluster_master_host].ansible_default_ipv4.address }}" -p {{ postgres_ha_pg_port }} -R -D "{{ postgres_ha_pg_data }}" -U "{{ postgres_ha_pg_repl_user }}" -v -P --xlog-method=stream'
+  shell: '{{ postgres_ha_pg_bindir }}/pg_basebackup -h "{{ hostvars[postgres_ha_cluster_master_host].ansible_default_ipv4.address }}" -p {{ postgres_ha_pg_port }} -R -D "{{ postgres_ha_pg_data }}" -U "{{ postgres_ha_pg_repl_user }}" -v -P -X stream'
   become: yes
   become_user: postgres
   vars:
