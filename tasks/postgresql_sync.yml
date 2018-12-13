@@ -6,10 +6,10 @@
   set_fact:
     pg_pkg_vers_suffix: '3'
 
-- name: set pg repo rpm version suffix for (v10)
+- name: set pg repo rpm version suffix for (v10+)
   set_fact:
     pg_pkg_vers_suffix: '2'
-  when: postgres_ha_pg_version == '10'
+  when: postgres_ha_pg_version >= 10
 
 - name: determine the correct postgres package name (all systems)
   set_fact:

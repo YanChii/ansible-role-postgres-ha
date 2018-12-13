@@ -7,7 +7,7 @@
 
 - name: select proper PAF package (centos6)
   set_fact:
-    paf_pkg: 'resource-agents-paf-2.1.0-1.noarch.rpm'
+    paf_pkg: 'resource-agents-paf-2.2.0-1.noarch.rpm'
   when: os_version == 'centos7'
 
 - name: select proper PAF package (centos6)
