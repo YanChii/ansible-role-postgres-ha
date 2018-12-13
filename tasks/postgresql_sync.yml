@@ -42,7 +42,7 @@
     and postgres_ha_pg_version |int < 10
 
 - name: init DB dir on master if necessary (centos 7 and postgresql 10 or above)
-  shell: '{{ postgres_ha_pg_bindir }}/postgresql{{ postgres_ha_pg_version | replace(".", "") }}-setup initdb'
+  shell: '{{ postgres_ha_pg_bindir }}/postgresql-{{ postgres_ha_pg_version | replace(".", "") }}-setup initdb'
   args:
     creates: "{{ postgres_ha_pg_data }}/PG_VERSION"
   # run only on one node
