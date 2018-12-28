@@ -36,6 +36,15 @@ postgres_ha_postgresql_conf_vars:                          # When altering this 
 
 postgres_ha_maint_scripts_path: /var/lib/pgsql/pg-maint    # location where to create user scripts for database administration
 
+# PAF vars
+postgres_ha_paf_version: 2.2.0
+postgres_ha_paf_geo_patch: False                           # Apply a patch to PAF to better handle network splits in geographically split clusters.
+                                                                # This patch is from creator of this ansible role and is not official.
+                                                                # It allows having a postgresql master-slave cluster without the need of fencing configured
+                                                                # (which is hard to have in geographically split clusters).
+                                                                # It adds additional safety mechanism of tracking the highest seen database timeline.
+                                                                # See diff here: https://github.com/YanChii/PAF/compare/master...YanChii:master-geo-ha?expand=1
+
 postgres_ha_network_rings:                                 # Use multiple networks for cluster interconnection. Defaults to primary NIC.
 #    ring0: "eth0"                                         # Primary network. The "lowest" string (ASCII compare) will be selected as the primary network ring.
 #    ring1: "eth1"                                         # Additional network. You can use any names instead of "ring*". These will be appended to a hostname.
