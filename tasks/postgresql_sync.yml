@@ -150,7 +150,7 @@
   when: inventory_hostname == postgres_ha_cluster_master_host    # run only on one node
   register: create_syncfile
 
-- name: check if DB is running (failure is ok)
+- name: check if DB is running (failure is OK)
   #shell: /bin/sh -c 'if {{ postgres_ha_pg_bindir }}/pg_ctl -D "{{ postgres_ha_pg_data }}" status &> /dev/null; then echo True; else echo False; fi'
   shell: "{{ postgres_ha_pg_bindir }}/pg_ctl -D {{ postgres_ha_pg_data }} status"
   register: db_running
