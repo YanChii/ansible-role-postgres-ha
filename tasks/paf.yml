@@ -32,7 +32,7 @@
     group: root
     mode:  0555
   when: postgres_ha_paf_version == '2.2.0' and
-        postgres_ha_paf_geo_patch == False
+        not postgres_ha_paf_geo_patch
 
 - name: apply geo-HA patches to DB failover agent
   copy:
@@ -42,7 +42,7 @@
     owner: root
     group: root
     mode:  0555
-  when: postgres_ha_paf_geo_patch == True
+  when: postgres_ha_paf_geo_patch
 
 - name: prepare DB recovery config
   template: src=recovery.conf.pcmk.j2 dest="{{ postgres_ha_pg_data }}/../recovery.conf.{{postgres_ha_cluster_name}}.pcmk"
