@@ -5,7 +5,7 @@
   when: inventory_hostname == postgres_ha_cluster_master_host    # run only on one node
 
 - name: refresh database cluster resource
-  shell: pcs resource cleanup "{{ postgres_ha_cluster_pg_HA_res_name }}" && pcs resource manage "{{ postgres_ha_cluster_pg_HA_res_name }}" && pcs resource clear "{{ postgres_ha_cluster_pg_HA_res_name }}"
+  shell: pcs resource cleanup "{{ postgres_ha_cluster_pg_HA_res_name }}" && pcs resource manage "{{ postgres_ha_cluster_pg_HA_res_name }}" && pcs resource clear "{{ postgres_ha_cluster_pg_HA_res_name }}" && pcs resource refresh
   when: inventory_hostname == postgres_ha_cluster_master_host    # run only on one node
 
 - name: check if all slaves are connected
