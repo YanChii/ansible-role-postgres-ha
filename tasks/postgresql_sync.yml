@@ -6,10 +6,10 @@
   set_fact:
     pg_pkg_vers_suffix: '3'
 
-- name: set pg repo rpm version suffix for (v10)
+- name: set pg repo rpm version suffix for (v10+)
   set_fact:
     pg_pkg_vers_suffix: '2'
-  when: postgres_ha_pg_version == '10'
+  when: postgres_ha_pg_version >= 10
 
 - name: determine the correct postgres package name (all systems)
   set_fact:
@@ -150,7 +150,7 @@
   when: inventory_hostname == postgres_ha_cluster_master_host    # run only on one node
   register: create_syncfile
 
-- name: check if DB is running (failure is ok)
+- name: check if DB is running (failure is OK)
   #shell: /bin/sh -c 'if {{ postgres_ha_pg_bindir }}/pg_ctl -D "{{ postgres_ha_pg_data }}" status &> /dev/null; then echo True; else echo False; fi'
   shell: "{{ postgres_ha_pg_bindir }}/pg_ctl -D {{ postgres_ha_pg_data }} status"
   register: db_running

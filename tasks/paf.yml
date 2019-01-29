@@ -1,19 +1,19 @@
 # vim: set filetype=yaml expandtab tabstop=2 shiftwidth=2 softtabstop=2 background=dark :
 
-# this rpm is also available on github.. but when multiple servers start to download 
-# the same file from github simultanneously, github will likely block you
-# and the role will fail
-# that's why it's embedded in the role
-
-- name: select proper PAF package (centos6)
+- name: select proper PAF package (centos7)
   set_fact:
-    paf_pkg: 'resource-agents-paf-2.1.0-1.noarch.rpm'
+    paf_pkg: 'resource-agents-paf-{{ postgres_ha_paf_version }}-1.noarch.rpm'
   when: os_version == 'centos7'
 
 - name: select proper PAF package (centos6)
   set_fact:
     paf_pkg: 'resource-agents-paf-1.1.0-1.noarch.rpm'
   when: os_version == 'centos6'
+
+# this rpm is also available on github.. but when multiple servers start to download 
+# the same file from github simultanneously, github will likely block you
+# and the role will fail
+# that's why it's embedded in the role
 
 - name: copy PAF rpm to hosts
   copy: src="{{ paf_pkg }}" dest="/tmp/{{ paf_pkg }}"
@@ -23,12 +23,26 @@
     name: "/tmp/{{ paf_pkg }}"
     state: present
 
-#- name: apply geo-HA patches to DB failover agent
-#  copy: src=pgsqlms dest=/usr/lib/ocf/resource.d/heartbeat/pgsqlms
-#  args:
-#    owner: root
-#    group: root
-#    mode:  0555
+- name: apply PAF v2.2.0 fix for newest pacemaker
+  copy:
+    src: 'pgsqlms-2.2.0-fix-pg10'
+    dest: '/usr/lib/ocf/resource.d/heartbeat/pgsqlms'
+  args:
+    owner: root
+    group: root
+    mode:  0555
+  when: postgres_ha_paf_version == '2.2.0' and
+        not postgres_ha_paf_geo_patch
+
+- name: apply geo-HA patches to DB failover agent
+  copy:
+    src: 'pgsqlms-{{ postgres_ha_paf_version }}-geo-patched'
+    dest: '/usr/lib/ocf/resource.d/heartbeat/pgsqlms'
+  args:
+    owner: root
+    group: root
+    mode:  0555
+  when: postgres_ha_paf_geo_patch
 
 - name: prepare DB recovery config
   template: src=recovery.conf.pcmk.j2 dest="{{ postgres_ha_pg_data }}/../recovery.conf.{{postgres_ha_cluster_name}}.pcmk"
