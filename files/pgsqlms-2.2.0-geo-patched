@@ -837,7 +837,7 @@ sub _get_all_cluster_nodes {
 	my $nodes_raw = qx{ $CRM_NODE --list };
 	my $allnodes = '';
 	for (split /^/, $nodes_raw) {
-		$_ =~ m/\d\s([a-zA-Z0-9_]+).*$/;
+		$_ =~ m/\d\s([a-zA-Z0-9\-\.]+).*$/;
 		$allnodes = "$allnodes $1" if defined $1;
 	}
 	return $allnodes;
