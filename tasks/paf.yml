@@ -56,49 +56,29 @@
 
 - name: create database cluster resource
   when: inventory_hostname == postgres_ha_cluster_master_host    # run only on one node
-  pcs_resource: command=create resource_id="{{ postgres_ha_cluster_pg_res_name }}" type=ocf:heartbeat:pgsqlms
-  args:
-    disabled: True
-    options:
-      bindir: "{{ postgres_ha_pg_bindir }}"
-      pgdata: "{{ postgres_ha_pg_data }}"
-      pgport: "{{ postgres_ha_pg_port }}"
-      recovery_template: "{{ postgres_ha_pg_data }}/../recovery.conf.{{postgres_ha_cluster_name}}.pcmk"
-    operations:
-      - action: start
-        options:
-          timeout: 60s
-      - action: stop
-        options:
-          timeout: 60s
-      - action: promote
-        options:
-          timeout: 30s
-      - action: demote
-        options:
-          timeout: 120s
-      - action: notify
-        options:
-          timeout: 60s
-      - action: monitor
-        options:
-          interval: "{{ postgres_ha_monitor_interval_pgmaster }}"
-          timeout: 10s
-          role: Master
-      - action: monitor
-        options:
-          interval: "{{ postgres_ha_monitor_interval_pgslave }}"
-          timeout: 10s
-          role: Slave
-
-- name: create master DB resource
-  when: inventory_hostname == postgres_ha_cluster_master_host    # run only on one node
-  pcs_resource: command=master resource_id="{{ postgres_ha_cluster_pg_HA_res_name }}" ms_name="{{ postgres_ha_cluster_pg_res_name }}" disabled=True
-  args:
-    options:
-      master-max      : 1
-      master-node-max : 1
-      clone-max       : "{{ ansible_play_batch|length }}"
-      clone-node-max  : 1
-      notify          : true
+  pcs_resource:
+    name: "{{ postgres_ha_cluster_pg_HA_res_name }}"    # master resource name
+    child_name: "{{ postgres_ha_cluster_pg_res_name }}" #  slave resource name
+    resource_class: 'master'
+    resource_type: ocf:heartbeat:pgsqlms
+    #force_resource_update: true
+    options: >
+      {% if db_resource_exists is not succeeded %}--disabled{% endif %}
+      bindir="{{ postgres_ha_pg_bindir }}"
+      pgdata="{{ postgres_ha_pg_data }}"
+      pgport="{{ postgres_ha_pg_port }}"
+      recovery_template="{{ postgres_ha_pg_data }}/../recovery.conf.{{postgres_ha_cluster_name}}.pcmk"
+      master
+      master-max=1
+      master-node-max=1
+      clone-max="{{ ansible_play_batch|length }}"
+      clone-node-max=1
+      notify=true
+      op start timeout=60s
+      op stop timeout=60s
+      op promote timeout=30s
+      op demote timeout=120s
+      op notify timeout=60s
+      op monitor interval="{{ postgres_ha_monitor_interval_pgmaster }}" timeout=10s role="Master"
+      op monitor interval="{{ postgres_ha_monitor_interval_pgslave }}"  timeout=10s role="Slave"
 

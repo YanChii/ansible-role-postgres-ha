@@ -185,7 +185,7 @@
 
 # if DB is clustered and is not running, we have a problem.. try at least cleaning the resource status
 - name: start master DB if necessary (in cluster)
-  shell: pcs resource cleanup "{{ postgres_ha_cluster_pg_HA_res_name }}" && sleep 15
+  shell: pcs resource manage "{{ postgres_ha_cluster_pg_HA_res_name }}" && pcs resource clear "{{ postgres_ha_cluster_pg_HA_res_name }}" && pcs resource refresh "{{ postgres_ha_cluster_pg_HA_res_name }}" && pcs resource enable "{{ postgres_ha_cluster_pg_HA_res_name }}" && sleep 20
   when: (inventory_hostname == postgres_ha_cluster_master_host) and
         (db_resource_exists is succeeded) and
         (db_running is failed)

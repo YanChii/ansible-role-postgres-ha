@@ -121,6 +121,7 @@
 - name: verify cluster configuration
   shell: crm_verify -L -V
   run_once: true
+  changed_when: false
 
 - name: enable cluster autostart
   shell: pcs cluster enable
