@@ -28,19 +28,23 @@ options:
     required: false
     default: present
     choices: [ 'present', 'absent' ]
+    type: str
   node_name:
     description:
       - hostname of node for authentication
     required: true
+    type: str
   username:
     description:
       - "username of 'cluster user' for cluster authentication"
     required: false
     default: 'hacluster'
+    type: str
   password:
     description:
       - "password of 'cluster user' for cluster authentication"
     required: false
+    type: str
 notes:
   - This module is (de)authenticating nodes only 1-way == authenticating node 1 agains
     node 2 doesn't mean that node 2 is authenticated agains node 1!
@@ -137,7 +141,7 @@ def run_module():
     elif (state == 'absent' and tokens_data and (
             (pcs_version == '0.9' and node_name in tokens_data['tokens']) or
             (pcs_version == '0.10' and node_name in tokens_data['known_hosts'])
-            )):
+    )):
         result['changed'] = True
         if not module.check_mode:
             if pcs_version == '0.9':

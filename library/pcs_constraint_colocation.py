@@ -28,36 +28,43 @@ options:
     required: false
     default: present
     choices: ['present', 'absent']
+    type: str
   resource1:
     description:
       - first resource for constraint
     required: true
+    type: str
   resource2:
     description:
       - second resource for constraint
     required: true
+    type: str
   resource1_role:
     description:
       - Role of resource1
     required: false
     choices: ['Master', 'Slave', 'Started']
     default: 'Started'
+    type: str
   resource2_role:
     description:
       - Role of resource2
     required: false
     choices: ['Master', 'Slave', 'Started']
     default: 'Started'
+    type: str
   score:
     description:
       - constraint score in range -INFINITY..0..INFINITY
     required: false
     default: 'INFINITY'
+    type: str
   cib_file:
     description:
       - "Apply changes to specified file containing cluster CIB instead of running cluster."
       - "This module requires the file to already contain cluster configuration."
     required: false
+    type: str
 notes:
    - tested on CentOS 7.6, Fedora 29
    - no extra options allowed for constraints
@@ -172,13 +179,20 @@ def run_module():
     # TODO: check which old versions requires this, the 0.9.162 seems to handle 'Started' role correctly
     if with_roles is True:
         if resource1_role != 'Started' and resource2_role != 'Started':
-            cmd_create = 'pcs %(cib_file_param)s constraint colocation add %(resource1_role)s %(resource1)s with %(resource2_role)s %(resource2)s %(score)s' % module.params
+            cmd_create = """ pcs %(cib_file_param)s constraint colocation
+                             add %(resource1_role)s %(resource1)s
+                             with %(resource2_role)s %(resource2)s %(score)s """ % module.params
         elif resource1_role != 'Started' and resource2_role == 'Started':
-            cmd_create = 'pcs %(cib_file_param)s constraint colocation add %(resource1_role)s %(resource1)s with %(resource2)s %(score)s' % module.params
+            cmd_create = """ pcs %(cib_file_param)s constraint colocation
+                             add %(resource1_role)s %(resource1)s
+                             with %(resource2)s %(score)s """ % module.params
         elif resource1_role == 'Started' and resource2_role != 'Started':
-            cmd_create = 'pcs %(cib_file_param)s constraint colocation add %(resource1)s with %(resource2_role)s %(resource2)s %(score)s' % module.params
+            cmd_create = """ pcs %(cib_file_param)s constraint colocation
+                             add %(resource1)s
+                             with %(resource2_role)s %(resource2)s %(score)s """ % module.params
     else:
-        cmd_create = 'pcs %(cib_file_param)s constraint colocation add %(resource1)s with %(resource2)s %(score)s' % module.params
+        cmd_create = """ pcs %(cib_file_param)s constraint colocation
+                         add %(resource1)s with %(resource2)s %(score)s """ % module.params
 
     # colocation constraint deletion command
     if constraint is not None:

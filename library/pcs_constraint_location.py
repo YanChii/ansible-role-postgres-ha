@@ -29,24 +29,29 @@ options:
     required: false
     default: present
     choices: ['present', 'absent']
+    type: str
   resource:
     description:
       - resource for constraint
     required: true
+    type: str
   node_name:
     description:
       - node name for constraints
     required: true
+    type: str
   score:
     description:
       - constraint score in range -INFINITY..0..INFINITY
     required: false
     default: 'INFINITY'
+    type: str
   cib_file:
     description:
       - "Apply changes to specified file containing cluster CIB instead of running cluster."
       - "This module requires the file to already contain cluster configuration."
     required: false
+    type: str
 notes:
    - tested on CentOS 7.6, Fedora 29
    - specifying non-existing node_name for Fedora 29 produces error. Use only existing node names.

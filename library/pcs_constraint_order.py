@@ -28,43 +28,51 @@ options:
     required: false
     default: present
     choices: ['present', 'absent']
+    type: str
   resource1:
     description:
       - first resource for constraint
     required: true
+    type: str
   resource2:
     description:
       - second resource for constraint
     required: true
+    type: str
   resource1_action:
     description:
       - action to which constraint applies for resource1
     required: false
     choices: ['start','promote','demote','stop']
     default: 'start'
+    type: str
   resource2_action:
     description:
       - action to which constraint applies for resource2
     required: false
     choices: ['start','promote','demote','stop']
     default: 'start'
+    type: str
   kind:
     description:
       - Kind of the order constraint
     required: false
     choices: ['Optional','Mandatory','Serialize']
     default: 'Mandatory'
+    type: str
   symmetrical:
     description:
       - Is the constraint symmetrical?
     required: false
     choices: ['true','false']
     default: 'true'
+    type: str
   cib_file:
     description:
       - "Apply changes to specified file containing cluster CIB instead of running cluster."
       - "This module requires the file to already contain cluster configuration."
     required: false
+    type: str
 notes:
    - tested on CentOS 7.6, Fedora 29
 '''
@@ -184,7 +192,10 @@ def run_module():
         result.update({'constraint_was_matched': False})
 
     # order constraint creation command
-    cmd_create = 'pcs %(cib_file_param)s constraint order %(resource1_action)s %(resource1)s then %(resource2_action)s %(resource2)s kind=%(kind)s symmetrical=%(symmetrical)s' % module.params
+    cmd_create = """ pcs %(cib_file_param)s constraint
+                     order %(resource1_action)s %(resource1)s
+                     then %(resource2_action)s %(resource2)s
+                     kind=%(kind)s symmetrical=%(symmetrical)s """ % module.params
 
     # order constraint deletion command
     if constraint is not None:
@@ -210,13 +221,15 @@ def run_module():
             if not module.check_mode:
                 rc, out, err = module.run_command(cmd_delete)
                 if rc != 0:
-                    module.fail_json(msg="Failed to delete constraint for replacement with cmd: '" + cmd_delete + "'", output=out, error=err)
+                    module.fail_json(msg="Failed to delete constraint for replacement with cmd: '" + cmd_delete + "'",
+                                     output=out, error=err)
                 else:
                     rc, out, err = module.run_command(cmd_create)
                     if rc == 0:
                         module.exit_json(**result)
                     else:
-                        module.fail_json(msg="Failed to create constraint replacement with cmd: '" + cmd_create + "'", output=out, error=err, cmd_del=cmd_delete)
+                        module.fail_json(msg="Failed to create constraint replacement with cmd: '" + cmd_create + "'",
+                                         output=out, error=err, cmd_del=cmd_delete)
 
     elif state == 'absent' and constraint is not None:
         # constraint should not be present but we have found something - lets remove that

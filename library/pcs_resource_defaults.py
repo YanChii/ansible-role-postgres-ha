@@ -28,6 +28,7 @@ options:
     required: false
     default: present
     choices: ['present', 'absent']
+    type: str
   defaults_type:
     description:
       - "'meta' - resource meta defaults, 'pcs resource defaults ...'"
@@ -35,20 +36,27 @@ options:
     required: false
     default: meta
     choices: ['meta', 'op']
+    type: str
   name:
     description:
       - name of cluster resource default
     required: true
+    type: str
   value:
     description:
       - value of cluster resource default
     required: false
+    type: str
   cib_file:
     description:
       - "Apply changes to specified file containing cluster CIB instead of running cluster."
     required: false
+    type: str
 notes:
-   - tested on CentOS 7.6, Fedora 29
+   - tested on CentOS 6.10 - pcs 0.9.155
+   - tested on CentOS 7.9 - pcs 0.9.169
+   - tested on CentOS 8.2 - pcs 0.10.4
+   - tested on Fedora 32 - pcs 0.10.7
 '''
 
 EXAMPLES = '''
@@ -123,8 +131,10 @@ def run_module():
         for row in out.split('\n')[:-1]:
             if row == 'No defaults set':
                 break
-            tmp = row.split(':')
-            defaults[tmp[0]] = tmp[1].lstrip()
+            if row == 'Meta Attrs: rsc_defaults-options' or row == 'Meta Attrs: op_defaults-options':
+                continue
+            tmp = row.split(':') if ':' in row else row.split('=')
+            defaults[tmp[0].strip()] = tmp[1].lstrip()
     else:
         module.fail_json(msg='Failed to load resource defaults from cluster. Is cluster running?')
 

@@ -29,22 +29,27 @@ options:
     required: false
     default: present
     choices: ['present', 'absent']
+    type: str
   name:
     description:
       - name of cluster property
     required: true
+    type: str
   node:
     description:
       - node name for node-specific property
     required: false
+    type: str
   value:
     description:
       - value of cluster property
     required: false
+    type: str
   cib_file:
     description:
       - "Apply changes to specified file containing cluster CIB instead of running cluster."
     required: false
+    type: str
 notes:
    - Tested on CentOS 7.6, Fedora 28, 29
    - Tested on Red Hat Enterprise Linux 7.6
