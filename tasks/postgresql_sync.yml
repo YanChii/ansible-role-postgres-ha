@@ -247,7 +247,6 @@
   when: postgres_ha_pg_version | int >= 12 and 
         inventory_hostname != postgres_ha_cluster_master_host
         # run on slaves
-  notify: restart postgresql
 
 - name: forbid self-replication in pg_hba.conf on slaves
   lineinfile: dest="{{ postgres_ha_pg_data }}/pg_hba.conf"
