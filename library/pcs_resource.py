@@ -363,7 +363,7 @@ def run_module():
                             module.add_cleanup_file(new_cib_path)
                             new_cib.write(new_cib_path)
                             push_scope = 'scope=resources' if module.params['force_resource_update'] else ''
-                            push_cmd = 'pcs cluster cib-push ' + push_scope + ' ' + new_cib_path
+                            push_cmd = 'pcs cluster cib-push --config ' + push_scope + ' ' + new_cib_path
                             rc, out, err = module.run_command(push_cmd)
                             if rc == 0:
                                 module.exit_json(changed=True)
