@@ -73,7 +73,10 @@
     regexp="^([# ]*{{ item.key }} *=.*$)"
     replace="{{ item.key }} = {{ item.value }}"
   with_dict: "{{ postgres_ha_postgresql_conf_vars_12 }}"
-  when: postgres_ha_pg_version | int >= 12
+  when: postgres_ha_pg_version | int >= 12 and 
+        (inventory_hostname == postgres_ha_cluster_master_host or
+        db_prevsync_file.stat.exists)
+        # run on master and on already-synchronized nodes
   notify: restart postgresql
 
 - meta: flush_handlers

@@ -56,6 +56,13 @@
 - name: stop database for clustering
   service: name="{{ postgres_ha_pg_systemd_svcname }}" state=stopped enabled=false
 
+- name: remove primary_conninfo from postgresql.auto.conf
+  lineinfile:
+    dest: "{{ postgres_ha_pg_data }}/postgresql.auto.conf"
+    regexp: "^primary_conninfo ="
+    state: absent
+  ignore_errors: True
+
 # 'force_resource_update' is commented out because it might trigger database restart after role re-run
 - name: create database cluster resource
   when: inventory_hostname == postgres_ha_cluster_master_host    # run only on one node
