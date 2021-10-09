@@ -3,6 +3,12 @@
 - debug: msg='cluster_members={{ansible_play_batch}}'
   run_once: true
 
+- name: enable HighAvailability dnf stream
+  command: dnf config-manager --set-enabled HighAvailability
+  args:
+    warn: false
+  when: os_version == 'centos8'
+
 - name: install cluster pkgs
   yum:
     name: pcs
@@ -59,17 +65,17 @@
     password: "{{ postgres_ha_cluster_ha_password_hash }}"
 
 - name: setup cluster auth
-  shell: pcs cluster auth {{ ansible_play_batch | join( " ") }} -u hacluster -p "{{ postgres_ha_cluster_ha_password }}"
+  shell: pcs "{% if os_version == 'centos8' %}host{% else %}cluster{% endif %}" auth {{ ansible_play_batch | join( " ") }} -u hacluster -p "{{ postgres_ha_cluster_ha_password }}"
 
 # We create cluster in two steps:
 # 1. create one-node cluster
 # 2. join other cluster nodes (the task below)
 # The reason is that we want to support adding new nodes by re-running the role.
-- name: create cluster (centos7)
-  shell: pcs cluster setup --name {{ postgres_ha_cluster_name }} "{{ pcs_hostname }}" {% if postgres_ha_pcs_advanced_params %}{% for param in postgres_ha_pcs_advanced_params|difference(['addr0', 'addr1', 'addr2', 'addr3', 'transport']) %}--{{ param }} {{ postgres_ha_pcs_advanced_params[param] }} {% endfor %}{% endif %} {% if postgres_ha_mcast_enable %}--transport udp {{ pcs_ring_addrs }}{% endif %}
+- name: create cluster (centos7/8)
+  shell: pcs cluster setup {% if os_version == 'centos7' %}--name{% else %}--start{% endif %} {{ postgres_ha_cluster_name }} "{{ pcs_hostname }}" {% if postgres_ha_pcs_advanced_params %}{% for param in postgres_ha_pcs_advanced_params|difference(['addr0', 'addr1', 'addr2', 'addr3', 'transport']) %}--{{ param }} {{ postgres_ha_pcs_advanced_params[param] }} {% endfor %}{% endif %} {% if postgres_ha_mcast_enable %}--transport udp {{ pcs_ring_addrs }}{% endif %}
   args:
     creates: /etc/corosync/corosync.conf
-  when: os_version == 'centos7' and
+  when: (os_version == 'centos7' or os_version == 'centos8') and
         inventory_hostname == postgres_ha_cluster_master_host   # run only on master node
 
 # ignore these parameters from postgres_ha_pcs_advanced_params: 'addr0', 'addr1', 'addr2', 'addr3', 'transport'
@@ -80,10 +86,10 @@
   when: os_version == 'centos6' and
         inventory_hostname == postgres_ha_cluster_master_host    # run only on master node
 
-- name: join cluster nodes (centos7)
+- name: join cluster nodes (centos7/8)
   shell: /bin/sh -c "if ! grep -q 'ring0_addr[:] *{{ item }}[\t ]*$' /etc/corosync/corosync.conf; then pcs cluster node add {{ hostvars[item]['pcs_hostname'] }}; fi"
   with_items: '{{ ansible_play_batch | difference([inventory_hostname]) }}'   # all hosts except me
-  when: os_version == 'centos7' and
+  when: (os_version == 'centos7' or os_version == 'centos8') and
         inventory_hostname == postgres_ha_cluster_master_host    # run only on master node
 
 - name: join cluster nodes (centos6)
@@ -117,6 +123,12 @@
 - name: alter cluster transition settings
   pcs_property: name=crmd-transition-delay value=3s
   run_once: true
+  when: (os_version == 'centos6' or os_version == 'centos7')
+
+#- name: alter cluster migration-threshold settings
+#  pcs_resource_defaults: name=migration-threshold value=5
+#  run_once: true
+#  when: os_version == 'centos8'
 
 - name: verify cluster configuration
   shell: crm_verify -L -V
@@ -126,6 +138,6 @@
 - name: enable cluster autostart
   shell: pcs cluster enable
 
-# reload corosync if neccessary (done automatically on the end of the tasklist)
-#- meta: flush_handlers
+# reload corosync if neccessary
+- meta: flush_handlers
 

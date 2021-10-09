@@ -1,35 +1,22 @@
 # vim: set filetype=yaml expandtab tabstop=2 shiftwidth=2 softtabstop=2 background=dark :
 
-# The name of the rpm file that imports the pg repo depends on the OS family and on the pg version.
-# This variable sets the last version digit of the repo file (e.g 9.6-3).
-- name: set pg repo rpm version suffix (v9.x)
-  set_fact:
-    pg_pkg_vers_suffix: '3'
-
-- name: set pg repo rpm version suffix for (v10+)
-  set_fact:
-    pg_pkg_vers_suffix: '2'
-  when: postgres_ha_pg_version >= 10
-
-- name: determine the correct postgres package name (all systems)
-  set_fact:
-    pg_pkg_name: 'pgdg-centos{{ postgres_ha_pg_version | replace(".", "") }}-{{ postgres_ha_pg_version }}-{{ pg_pkg_vers_suffix }}.noarch.rpm'
-  #when: ansible_distribution == 'CentOS'  # this is default
-
-- name: determine the correct postgres package name (RHEL)
-  set_fact:
-    pg_pkg_name: 'pgdg-redhat{{ postgres_ha_pg_version | replace(".", "") }}-{{ postgres_ha_pg_version }}-{{ pg_pkg_vers_suffix }}.noarch.rpm'
-  when: ansible_distribution == 'Red Hat Enterprise Linux'
+- name: disable dnf postgres module
+  command: dnf -qy module disable postgresql
+  args:
+    warn: false
+  when: os_version == 'centos8'
 
 - name: 'import pg{{ postgres_ha_pg_version | replace(".", "") }} repo'
   yum:
     name: "{{ postgres_ha_repo_url }}"
     state: installed
+    disable_gpg_check: True
   when: postgres_ha_import_repo
 
 - name: 'install pg{{ postgres_ha_pg_version | replace(".", "") }}'
   yum:
-    name: 'postgresql{{ postgres_ha_pg_version | replace(".", "") }}-server, postgresql{{ postgres_ha_pg_version | replace(".", "") }}-contrib, python-psycopg2'
+    name: 'postgresql{{ postgres_ha_pg_version | replace(".", "") }}-server, postgresql{{ postgres_ha_pg_version | replace(".", "") }}-contrib, python{% if ansible_distribution_major_version | int >= 8 %}3{% endif %}-psycopg2'
+    # purposely omited ansible_os_family == "RedHat" to simplify this task ^^
     state: installed
 
 - name: init DB dir on master if necessary (centos 7 and postgresql 9.6 or older)
@@ -38,7 +25,7 @@
     creates: "{{ postgres_ha_pg_data }}/PG_VERSION"
   # run only on one node
   when: inventory_hostname == postgres_ha_cluster_master_host
-    and os_version == 'centos7'
+    and (os_version == 'centos7' or os_version == 'centos8')
     and postgres_ha_pg_version |int < 10
 
 - name: init DB dir on master if necessary (centos 7 and postgresql 10 or above)
@@ -47,7 +34,7 @@
     creates: "{{ postgres_ha_pg_data }}/PG_VERSION"
   # run only on one node
   when: inventory_hostname == postgres_ha_cluster_master_host
-    and os_version == 'centos7'
+    and (os_version == 'centos7' or os_version == 'centos8')
     and postgres_ha_pg_version |int >= 10
 
 - name: init DB dir on master if necessary (centos 6)
@@ -72,12 +59,21 @@
 #    mode:  0600
 
 - name: alter clustering-related settings in postgresql.conf
-  replace: 
+  replace:
     dest="{{ postgres_ha_pg_data }}/postgresql.conf"
     regexp="^([# ]*{{ item.key }} *=.*$)"
     replace="{{ item.key }} = {{ item.value }}"
   when: inventory_hostname == postgres_ha_cluster_master_host   # run only on master node
   with_dict: "{{ postgres_ha_postgresql_conf_vars }}"
+  notify: restart postgresql
+
+- name: alter clustering-related settings in postgresql.conf (pg12+)
+  replace:
+    dest="{{ postgres_ha_pg_data }}/postgresql.conf"
+    regexp="^([# ]*{{ item.key }} *=.*$)"
+    replace="{{ item.key }} = {{ item.value }}"
+  with_dict: "{{ postgres_ha_postgresql_conf_vars_12 }}"
+  when: postgres_ha_pg_version | int >= 12
   notify: restart postgresql
 
 - meta: flush_handlers
