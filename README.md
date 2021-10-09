@@ -45,7 +45,7 @@ What you should know
 Requirements
 ------------
 
-This role works on CentOS 6 and 7. RHEL was not tested but should work without problem. If you need support for other distribution, I can help. Post an issue.
+This role works on CentOS 6/7/8. RHEL was not tested but it should also work.
 
 The postgresql binaries on your primary server should be installed from the official repository:
 
@@ -79,9 +79,9 @@ Example Playbook
 
 The usage is relatively simple - install minimal CentOS-es, set the variables and run the role.
 
-Two settings are required:
+Two ansible settings are required:
 - `gather_facts=True`        - we need to know the IP addresses of cluster nodes
-- `any_errors_fatal=True`    - it ensures that error on any node will result in stopping the whole ansible run. Because it doesn't make sense to continue when you lose some of your cluster nodes during transit.
+- `any_errors_fatal=True`    - it ensures that error on any node will result in stopping the whole ansible run. Because it doesn't make sense to continue when you lose some of your cluster nodes during the process.
 
 ```
     - name: install PG HA
@@ -89,6 +89,7 @@ Two settings are required:
       gather_facts: True
       any_errors_fatal: True
       vars:
+        postgres_ha_pg_version: 14
         postgres_ha_cluster_master_host: db1
         postgres_ha_cluster_vip: 10.10.10.10
         postgres_ha_pg_repl_pass: MySuperSecretDBPass
@@ -104,6 +105,8 @@ Two settings are required:
 Cleanup after failure
 ---------------------
 
+The role can fail. The clustering process is complicated beast and sometimes behaves unexpectedly. Re-running the role often helps.
+
 If the role fails repeatedly and you want to run it fresh as if it was the first time, you need to clean up some things.
 Please note that default resource names are used here. If you change them using variables, you need to change it also in these commands.
 
@@ -111,32 +114,32 @@ Please note that default resource names are used here. If you change them using 
 ```
 pcs resource delete pg-vip
 pcs resource delete postgres
-#pcs resource delete postgres-ha   # probably not needed
-#pcs resource cleanup postgres     # probably not needed
+pcs resource cleanup postgres     # sometimes needed
+#pcs resource delete postgres-ha  # probably not needed
 
 # Make sure no (related) cluster resources are defined.
 ```
 - RUN ON ALL SLAVE NODES:
 ```
-systemctl stop postgresql-9.6
+systemctl stop postgresql-14
 # Make sure no postgres db is running.
-systemctl status postgresql-9.6
+systemctl status postgresql-14
 ps aux | grep postgres
-rm -rf /var/lib/pgsql/9.6/data
-rm -f /var/lib/pgsql/9.6/recovery.conf.pgcluster.pcmk
-rm -f /var/lib/pgsql/9.6/.*_constraints_processed   # name generated from postgres_ha_cluster_pg_res_name
+rm -rf /var/lib/pgsql/14/data
+rm -f /var/lib/pgsql/14/.*_constraints_processed   # name generated from postgres_ha_cluster_pg_res_name
+rm -f /var/lib/pgsql/14/recovery.conf.pgcluster.pcmk	# only pg < 12
 ```
 - RUN ONLY ON MASTER NODE:
 ```
-systemctl stop postgresql-9.6
-rm -f /var/lib/pgsql/9.6/recovery.conf.pgcluster.pcmk
-rm -f /var/lib/pgsql/9.6/.*_constraints_processed
-rm -f /var/lib/pgsql/9.6/data/recovery.conf
-rm -f /var/lib/pgsql/9.6/data/.synchronized
+systemctl stop postgresql-14
+rm -f /var/lib/pgsql/14/.*_constraints_processed
+rm -f /var/lib/pgsql/14/data/.synchronized
+rm -f /var/lib/pgsql/14/data/recovery.conf				# only pg < 12
+rm -f /var/lib/pgsql/14/recovery.conf.pgcluster.pcmk	# only pg < 12
 # Make sure no postgres db is running.
 ps aux | grep postgres
-systemctl start postgresql-9.6
-systemctl status postgresql-9.6
+systemctl start postgresql-14
+systemctl status postgresql-14
 # Check postgres db functionality.
 ```
 - START AGAIN
