@@ -66,6 +66,8 @@
 
 - name: setup cluster auth
   shell: pcs "{% if os_version == 'centos8' %}host{% else %}cluster{% endif %}" auth {{ ansible_play_batch | join( " ") }} -u hacluster -p "{{ postgres_ha_cluster_ha_password }}"
+  retries: 15
+  delay: 2
 
 # We create cluster in two steps:
 # 1. create one-node cluster

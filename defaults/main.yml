@@ -19,7 +19,7 @@ postgres_ha_cluster_ha_password: 'fropFav7epAbOch2'        # password for joinin
 postgres_ha_cluster_ha_password_hash: '$6$MHAki4YS$Nk7O3FEC2G.INznoSUj4ByFgdwFJ8mcI9.Ks3XAoLLe9f9GB36G8hZe9o8ygDySJwvnLVCn0LGPzcOapK42/A/'  # fropFav7epAbOch2
 
 # postgres config
-postgres_ha_pg_version: 9.6
+postgres_ha_pg_version: 14
 postgres_ha_import_repo: true                               # Enable download of postgresql repo before install
 postgres_ha_repo_url: 'https://download.postgresql.org/pub/repos/yum/reporpms/EL-{{ ansible_distribution_major_version }}-x86_64/pgdg-redhat-repo-latest.noarch.rpm'
 postgres_ha_pg_systemd_svcname: "postgresql-{{ postgres_ha_pg_version }}"   # the name of the original posgres DB resource in systemd
