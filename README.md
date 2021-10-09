@@ -126,7 +126,7 @@ systemctl stop postgresql-14
 systemctl status postgresql-14
 ps aux | grep postgres
 rm -rf /var/lib/pgsql/14/data
-rm -f /var/lib/pgsql/14/.*_constraints_processed   # name generated from postgres_ha_cluster_pg_res_name
+rm -f /var/lib/pgsql/14/.*_constraints_processed		# name generated from postgres_ha_cluster_pg_res_name
 rm -f /var/lib/pgsql/14/recovery.conf.pgcluster.pcmk	# only pg < 12
 ```
 - RUN ONLY ON MASTER NODE:
@@ -134,6 +134,7 @@ rm -f /var/lib/pgsql/14/recovery.conf.pgcluster.pcmk	# only pg < 12
 systemctl stop postgresql-14
 rm -f /var/lib/pgsql/14/.*_constraints_processed
 rm -f /var/lib/pgsql/14/data/.synchronized
+rm -f /var/lib/pgsql/14/data/standby.signal				# only pg >= 12
 rm -f /var/lib/pgsql/14/data/recovery.conf				# only pg < 12
 rm -f /var/lib/pgsql/14/recovery.conf.pgcluster.pcmk	# only pg < 12
 # Make sure no postgres db is running.

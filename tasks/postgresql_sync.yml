@@ -238,6 +238,17 @@
   #      (datadir_files.matched|int == 0)
   register: slave_resync
 
+- name: reapply clustering-related settings in postgresql.conf (pg12+)
+  replace:
+    dest="{{ postgres_ha_pg_data }}/postgresql.conf"
+    regexp="^([# ]*{{ item.key }} *=.*$)"
+    replace="{{ item.key }} = {{ item.value }}"
+  with_dict: "{{ postgres_ha_postgresql_conf_vars_12 }}"
+  when: postgres_ha_pg_version | int >= 12 and 
+        inventory_hostname != postgres_ha_cluster_master_host
+        # run on slaves
+  notify: restart postgresql
+
 - name: forbid self-replication in pg_hba.conf on slaves
   lineinfile: dest="{{ postgres_ha_pg_data }}/pg_hba.conf"
     regexp='^host    replication .*{{ hostvars[item].ansible_default_ipv4.address }}/32'
