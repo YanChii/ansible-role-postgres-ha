@@ -2,14 +2,12 @@
 
 - name: create virtual IP resource
   when: inventory_hostname == postgres_ha_cluster_master_host   # run only on one node
-  pcs_resource: command=create resource_id="{{ postgres_ha_cluster_vip_res_name }}" type=ocf:heartbeat:IPaddr2
-  args:
-    options:
-      ip: "{{ postgres_ha_cluster_vip }}"
-      cidr_netmask: "{{ postgres_ha_cluster_vip_mask }}"
-    operations:
-      - action: monitor
-        options:
-          interval: 10s
+  pcs_resource:
+    name: "{{ postgres_ha_cluster_vip_res_name }}"
+    resource_type: ocf:heartbeat:IPaddr2
+    options: >
+      ip="{{ postgres_ha_cluster_vip }}"
+      cidr_netmask="{{ postgres_ha_cluster_vip_mask }}"
+      op monitor interval=10s
 
 

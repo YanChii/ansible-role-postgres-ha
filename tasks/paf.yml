@@ -3,7 +3,7 @@
 - name: select proper PAF package (centos7)
   set_fact:
     paf_pkg: 'resource-agents-paf-{{ postgres_ha_paf_version }}-1.noarch.rpm'
-  when: os_version == 'centos7'
+  when: (os_version == 'centos7' or os_version == 'centos8')
 
 - name: select proper PAF package (centos6)
   set_fact:
@@ -22,6 +22,7 @@
   yum:
     name: "/tmp/{{ paf_pkg }}"
     state: present
+    disable_gpg_check: True
 
 - name: apply PAF v2.2.0 fix for newest pacemaker
   copy:
@@ -44,61 +45,52 @@
     mode:  0555
   when: postgres_ha_paf_geo_patch
 
-- name: prepare DB recovery config
+- name: prepare DB recovery.conf
   template: src=recovery.conf.pcmk.j2 dest="{{ postgres_ha_pg_data }}/../recovery.conf.{{postgres_ha_cluster_name}}.pcmk"
   args:
     owner: postgres
     group: postgres
     mode:  0644
+  when: postgres_ha_pg_version | int < 12
 
 - name: stop database for clustering
   service: name="{{ postgres_ha_pg_systemd_svcname }}" state=stopped enabled=false
 
+- name: remove primary_conninfo from postgresql.auto.conf
+  lineinfile:
+    dest: "{{ postgres_ha_pg_data }}/postgresql.auto.conf"
+    regexp: "^primary_conninfo ="
+    state: absent
+  ignore_errors: True
+
+# 'force_resource_update' is commented out because it might trigger database restart after role re-run
 - name: create database cluster resource
   when: inventory_hostname == postgres_ha_cluster_master_host    # run only on one node
-  pcs_resource: command=create resource_id="{{ postgres_ha_cluster_pg_res_name }}" type=ocf:heartbeat:pgsqlms
-  args:
-    disabled: True
-    options:
-      bindir: "{{ postgres_ha_pg_bindir }}"
-      pgdata: "{{ postgres_ha_pg_data }}"
-      pgport: "{{ postgres_ha_pg_port }}"
-      recovery_template: "{{ postgres_ha_pg_data }}/../recovery.conf.{{postgres_ha_cluster_name}}.pcmk"
-    operations:
-      - action: start
-        options:
-          timeout: 60s
-      - action: stop
-        options:
-          timeout: 60s
-      - action: promote
-        options:
-          timeout: 30s
-      - action: demote
-        options:
-          timeout: 120s
-      - action: notify
-        options:
-          timeout: 60s
-      - action: monitor
-        options:
-          interval: "{{ postgres_ha_monitor_interval_pgmaster }}"
-          timeout: 10s
-          role: Master
-      - action: monitor
-        options:
-          interval: "{{ postgres_ha_monitor_interval_pgslave }}"
-          timeout: 10s
-          role: Slave
-
-- name: create master DB resource
-  when: inventory_hostname == postgres_ha_cluster_master_host    # run only on one node
-  pcs_resource: command=master resource_id="{{ postgres_ha_cluster_pg_HA_res_name }}" ms_name="{{ postgres_ha_cluster_pg_res_name }}" disabled=True
-  args:
-    options:
-      master-max      : 1
-      master-node-max : 1
-      clone-max       : "{{ ansible_play_batch|length }}"
-      clone-node-max  : 1
-      notify          : true
+  pcs_resource:
+    name: "{{ postgres_ha_cluster_pg_HA_res_name }}"    # master resource name
+    child_name: "{{ postgres_ha_cluster_pg_res_name }}" #  slave resource name
+    resource_class: '{% if ansible_distribution_major_version | int >= 8 %}promotable{% else %}master{% endif %}'
+    resource_type: ocf:heartbeat:pgsqlms
+    #force_resource_update: true
+    options: >
+      {% if db_resource_exists is not succeeded %}--disabled{% endif %}
+      bindir="{{ postgres_ha_pg_bindir }}"
+      pgdata="{{ postgres_ha_pg_data }}"
+      pgport="{{ postgres_ha_pg_port }}"
+      {% if postgres_ha_pg_version | int < 12 %}
+      recovery_template="{{ postgres_ha_pg_data }}/../recovery.conf.{{postgres_ha_cluster_name}}.pcmk"
+      {% endif %}
+      '{% if ansible_distribution_major_version | int >= 8 %}promotable{% else %}master{% endif %}'
+      master-max=1
+      master-node-max=1
+      clone-max="{{ ansible_play_batch|length }}"
+      clone-node-max=1
+      notify=true
+      op start timeout=60s
+      op stop timeout=60s
+      op promote timeout=30s
+      op demote timeout=120s
+      op notify timeout=60s
+      op monitor interval="{{ postgres_ha_monitor_interval_pgmaster }}" timeout=10s role="Master"
+      op monitor interval="{{ postgres_ha_monitor_interval_pgslave }}"  timeout=10s role="Slave"
 

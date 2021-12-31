@@ -19,9 +19,9 @@ postgres_ha_cluster_ha_password: 'fropFav7epAbOch2'        # password for joinin
 postgres_ha_cluster_ha_password_hash: '$6$MHAki4YS$Nk7O3FEC2G.INznoSUj4ByFgdwFJ8mcI9.Ks3XAoLLe9f9GB36G8hZe9o8ygDySJwvnLVCn0LGPzcOapK42/A/'  # fropFav7epAbOch2
 
 # postgres config
-postgres_ha_pg_version: 9.6
+postgres_ha_pg_version: 14
 postgres_ha_import_repo: true                               # Enable download of postgresql repo before install
-postgres_ha_repo_url: 'https://download.postgresql.org/pub/repos/yum/{{ postgres_ha_pg_version }}/redhat/rhel-7-x86_64/{{ pg_pkg_name }}'
+postgres_ha_repo_url: 'https://download.postgresql.org/pub/repos/yum/reporpms/EL-{{ ansible_distribution_major_version }}-x86_64/pgdg-redhat-repo-latest.noarch.rpm'
 postgres_ha_pg_systemd_svcname: "postgresql-{{ postgres_ha_pg_version }}"   # the name of the original posgres DB resource in systemd
 postgres_ha_pg_data: "/var/lib/pgsql/{{ postgres_ha_pg_version }}/data"     # where can I find PG datadir?
 postgres_ha_pg_bindir: "/usr/pgsql-{{ postgres_ha_pg_version }}/bin"        # where are the PG binaries?
@@ -34,10 +34,14 @@ postgres_ha_postgresql_conf_vars:                          # When altering this 
     hot_standby: "on"
     wal_log_hints: "on"
 
+postgres_ha_postgresql_conf_vars_12:                       # Additional conf vars for pg12+
+    primary_conninfo: "'port={{ postgres_ha_pg_port }} host={{ postgres_ha_cluster_vip }} user={{ postgres_ha_pg_repl_user }} application_name={{ inventory_hostname }}'"
+    recovery_target_timeline: "'latest'"
+
 postgres_ha_maint_scripts_path: /var/lib/pgsql/pg-maint    # location where to create user scripts for database administration
 
 # PAF vars
-postgres_ha_paf_version: 2.2.1
+postgres_ha_paf_version: 2.3.0
 postgres_ha_paf_geo_patch: False                           # Apply a patch to PAF to better handle network splits in geographically split clusters.
                                                                 # This patch is from creator of this ansible role and is not official.
                                                                 # It allows having a postgresql master-slave cluster without the need of fencing configured
